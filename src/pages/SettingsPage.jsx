@@ -1,12 +1,16 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut, Server } from 'lucide-react'
+import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut, Server, CheckCircle, XCircle } from 'lucide-react'
 import { logActivity } from '../data/activity'
+import { firebaseService } from '../services/firebaseService'
 
 export default function SettingsPage() {
   const [ecoMode, setEcoMode] = useState(false)
   const [lang, setLang] = useState('en')
   
+  const [testResult, setTestResult] = useState(null)
+  const [isTesting, setIsTesting] = useState(false)
+
   const [previewData, setPreviewData] = useState(null)
   const fileInputRef = useRef(null)
 
@@ -92,6 +96,14 @@ export default function SettingsPage() {
     localStorage.removeItem('km_empire_owner_session')
     logActivity('Logged out', 'Owner securely logged out of the dashboard (Local Demo)')
     window.location.reload()
+  }
+
+  const handleTestFirebase = async () => {
+    setIsTesting(true)
+    setTestResult(null)
+    const result = await firebaseService.testFirebaseConnection()
+    setTestResult(result)
+    setIsTesting(false)
   }
 
   return (
@@ -276,6 +288,34 @@ export default function SettingsPage() {
                 <p className="text-[10px] text-status-error font-bold leading-tight">
                   This is a local demo security guard. Real protection requires Firebase Authentication and Firestore Security Rules. 
                   Firebase private keys or service accounts must never be stored in frontend code or GitHub.
+                </p>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mt-4 text-center">
+                <button 
+                  onClick={handleTestFirebase}
+                  disabled={isTesting}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mb-3"
+                >
+                  {isTesting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Server className="w-4 h-4" />}
+                  {isTesting ? 'Testing Connection...' : 'Test Firebase Connection'}
+                </button>
+
+                {testResult && (
+                  <div className={`p-3 rounded-lg text-xs font-bold mb-3 flex items-center gap-2 ${testResult.success ? 'bg-status-live/20 text-status-live' : 'bg-status-error/20 text-status-error'}`}>
+                    {testResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {testResult.message}
+                  </div>
+                )}
+                
+                {testResult?.message === 'Permission denied' && (
+                  <p className="text-[10px] text-status-error font-semibold mb-3">
+                    Firebase connected, but Firestore rules may be blocking test write/read.
+                  </p>
+                )}
+
+                <p className="text-[10px] text-obsidian-muted/80">
+                  Firebase test only. Your dashboard data is still stored locally.
                 </p>
               </div>
             </div>

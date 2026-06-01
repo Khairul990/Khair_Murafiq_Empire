@@ -9,6 +9,9 @@
  * initialization will be injected here using environment variables (e.g., import.meta.env).
  */
 
+import { db } from './firebaseConfig'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+
 // Helper to inject standard fields
 const withStandardFields = (data) => ({
   ...data,
@@ -62,5 +65,32 @@ export const firebaseService = {
   deleteAlert: async (id) => {
     // In future: await deleteDoc(doc(db, "control_alerts", id))
     console.log("Mock Firebase: Deleted Alert", id)
+  },
+
+  // CONNECTION TEST
+  testFirebaseConnection: async () => {
+    try {
+      if (!db) return { success: false, message: 'Missing env config' }
+      
+      const testRef = doc(db, 'control_connection_tests', 'latest_test')
+      await setDoc(testRef, {
+        status: "success",
+        source: "connection_test",
+        testedAt: new Date().toISOString()
+      })
+      
+      const snap = await getDoc(testRef)
+      if (snap.exists() && snap.data().status === 'success') {
+        return { success: true, message: 'Connected' }
+      }
+      
+      return { success: false, message: 'Failed' }
+    } catch (error) {
+      console.error("Firebase Test Error:", error)
+      if (error.code === 'permission-denied') return { success: false, message: 'Permission denied' }
+      if (error.code?.includes('network')) return { success: false, message: 'Network error' }
+      if (error.message?.includes('Missing or insufficient permissions')) return { success: false, message: 'Permission denied' }
+      return { success: false, message: 'Failed' }
+    }
   }
 }
