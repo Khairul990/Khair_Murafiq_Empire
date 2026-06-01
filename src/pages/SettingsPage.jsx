@@ -116,7 +116,9 @@ export default function SettingsPage() {
     const getCount = (key) => {
       try {
         const val = localStorage.getItem(key)
-        return val ? JSON.parse(val).length : 0
+        if (!val) return 0
+        const parsed = JSON.parse(val)
+        return Array.isArray(parsed) ? parsed.length : (parsed ? Object.keys(parsed).length : 0)
       } catch { return 0 }
     }
     
