@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldAlert, KeyRound, Lock, AlertTriangle, CheckCircle, Database } from 'lucide-react'
+import { ShieldAlert, KeyRound, Lock, AlertTriangle, CheckCircle, Database, FileText, Trash2 } from 'lucide-react'
+import { getAuditLogs, clearAuditLogs } from '../utils/auditLogger'
 
 export default function SafetyPage() {
   const rules = [
@@ -10,6 +12,19 @@ export default function SafetyPage() {
     { title: 'No Dangerous Auto-Fixes', desc: 'Automated code or system fixes must be reviewed by the owner.', icon: AlertTriangle, status: 'Active' },
     { title: 'Future Integrations (Serverless)', desc: 'All risky actions will route through secure backend functions.', icon: Database, status: 'Planned' },
   ]
+
+  const [logs, setLogs] = useState([])
+
+  useEffect(() => {
+    setLogs(getAuditLogs().slice(0, 10))
+  }, [])
+
+  const handleClearLogs = () => {
+    if (window.confirm("Clear local assistant logs only?")) {
+      clearAuditLogs()
+      setLogs([])
+    }
+  }
 
   return (
     <motion.div
@@ -121,6 +136,54 @@ export default function SafetyPage() {
             <li>Take a manual JSON backup via the Settings page.</li>
             <li>Plan Serverless API integrations for Phase 2.</li>
           </ol>
+        </div>
+      </div>
+
+      {/* Assistant Audit Logs Section */}
+      <div className="mt-8 pt-8 border-t border-obsidian-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg lg:text-xl font-extrabold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gold" />
+            Assistant <span className="gold-gradient-text">Audit Logs</span>
+          </h2>
+          <button
+            onClick={handleClearLogs}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-status-error/30 text-status-error hover:bg-status-error/10 transition-colors text-xs font-bold"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear Logs
+          </button>
+        </div>
+
+        <div className="glass-card rounded-2xl border border-obsidian-border overflow-hidden">
+          <div className="max-h-[300px] overflow-y-auto empire-scrollbar p-1">
+            {logs.length === 0 ? (
+              <div className="p-8 text-center text-obsidian-muted text-sm">
+                No logs found.
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {logs.map((log) => (
+                  <div key={log.id} className="p-3 border-b border-obsidian-border/50 last:border-0 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-2 hover:bg-obsidian-dark/50 transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-bold capitalize">{log.action.replace(/_/g, ' ')}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                          log.status === 'success' ? 'bg-status-live/10 text-status-live border border-status-live/20' : 'bg-status-error/10 text-status-error border border-status-error/20'
+                        }`}>
+                          {log.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-obsidian-muted mt-0.5">{log.note}</p>
+                    </div>
+                    <div className="text-[10px] text-obsidian-muted font-mono bg-obsidian-dark px-2 py-1 rounded">
+                      {new Date(log.timestamp).toLocaleString('en-GB')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

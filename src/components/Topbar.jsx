@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Bell, User, Zap, Moon } from 'lucide-react'
+import { Bell, User, Zap, Moon, ShieldAlert } from 'lucide-react'
 import { useState } from 'react'
 
 const pageTitles = {
@@ -36,7 +36,7 @@ export default function Topbar({ onToggleAssistant }) {
           {/* Turbo / Eco Mode Toggle */}
           <button
             onClick={() => setTurboMode(!turboMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               turboMode
                 ? 'bg-gold/10 text-gold border border-gold/20'
                 : 'bg-obsidian-card border border-obsidian-border text-obsidian-muted hover:text-white'
@@ -44,6 +44,16 @@ export default function Topbar({ onToggleAssistant }) {
           >
             <Zap className={`w-3.5 h-3.5 ${turboMode ? 'fill-gold' : ''}`} />
             {turboMode ? 'Turbo' : 'Eco'}
+          </button>
+
+          {/* Emergency Lockdown */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('trigger_lockdown'))}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-status-error/10 text-status-error border border-status-error/30 hover:bg-status-error hover:text-white"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Emergency Lockdown</span>
+            <span className="sm:hidden">Lockdown</span>
           </button>
 
           {/* Notifications */}

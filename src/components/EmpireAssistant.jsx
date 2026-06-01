@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bot, X, Send, Sparkles, Mic, FileText } from 'lucide-react'
+import { Bot, X, Send, Sparkles, Mic, FileText, Command } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 import { getAssistantResponse } from '../data/assistantData'
+import { addAuditLog } from '../utils/auditLogger'
 
 export default function EmpireAssistant({ open, onToggle }) {
   const [messages, setMessages] = useState([
@@ -48,7 +49,19 @@ export default function EmpireAssistant({ open, onToggle }) {
       window.speechSynthesis.getVoices()
     }
     loadRisk()
-  }, [])
+
+    const handleLockdownConfirmed = () => {
+      setMonitorActive(false)
+      if (onToggle && open) {
+        onToggle()
+      }
+    }
+    window.addEventListener('lockdown_confirmed', handleLockdownConfirmed)
+
+    return () => {
+      window.removeEventListener('lockdown_confirmed', handleLockdownConfirmed)
+    }
+  }, [open, onToggle])
 
   const speakAlert = (text) => {
     if (!window.speechSynthesis) return
@@ -160,6 +173,36 @@ export default function EmpireAssistant({ open, onToggle }) {
   }, [monitorActive, checkInterval, quietMode])
 
   useEffect(() => {
+    const handleKeyDownGlobally = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.ctrlKey && e.shiftKey) {
+        switch(e.key.toLowerCase()) {
+          case 'r':
+            e.preventDefault()
+            handleSend(lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report')
+            break
+          case 's':
+            e.preventDefault()
+            handleSend('Security check করো')
+            break
+          case 'n':
+            e.preventDefault()
+            handleSend('Next কাজ বলো')
+            break
+          case 'l':
+            e.preventDefault()
+            window.dispatchEvent(new Event('trigger_lockdown'))
+            break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDownGlobally)
+    return () => window.removeEventListener('keydown', handleKeyDownGlobally)
+  }, [lang])
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -259,6 +302,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     if (reportCommands.includes(cmd)) {
       const report = await generateReport()
       setMessages(prev => [...prev, { role: 'assistant', text: report }])
+      addAuditLog('quick_report_generated', 'success', 'assistant', 'Generated quick report')
       setIsTyping(false)
       return
     }
@@ -273,6 +317,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     if (cmd === 'security check করো') {
       const txt = 'Security Check Report:\n• No API key/token/password in frontend/GitHub\n• Firebase Web SDK only uses public config\n• Firestore Rules block unauthorized writes\n• Local Storage is acting as fallback\n\nOverall: Safe Mode Active.'
       setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      addAuditLog('security_check_requested', 'success', 'assistant', 'Security check completed')
       setIsTyping(false)
       return
     }
@@ -280,13 +325,15 @@ export default function EmpireAssistant({ open, onToggle }) {
     if (cmd === 'next কাজ বলো') {
       const txt = 'Recommended Next Safe Action:\n১. প্রথমে Alerts প্যানেল চেক করে Critical issue থাকলে ফিক্স করুন।\n২. Task list থেকে Urgent কাজ শেষ করুন।\n৩. নতুন কোনো update দেওয়ার আগে Data Export (Backup) করে নিন।'
       setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      addAuditLog('next_action_requested', 'success', 'assistant', 'Provided next action recommendations')
       setIsTyping(false)
       return
     }
 
     if (cmd === 'short voice report') {
-      const txt = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। আজকে কিছু টাস্ক এবং অ্যালার্ট পেন্ডিং আছে। রিয়েল এপিআই ব্যবহার না করে মক মোডে কাজ করুন। আল্লাহ ভরসা, নিরাপদভাবে এগিয়ে যান।`
+      const txt = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। আজকে কিছু টাস্ক এবং অ্যালার্ট পেন্ডিং আছে। রিয়েল এপিআই ব্যবহার অ্যাকাউন্টে যুক্ত না করে মক মোডে কাজ করুন। আল্লাহ ভরসা, নিরাপদভাবে এগিয়ে যান।`
       setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      addAuditLog('short_voice_report_generated', 'success', 'assistant', 'Generated short voice report')
       setIsTyping(false)
       return
     }
@@ -316,6 +363,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       window.speechSynthesis.cancel()
       setIsSpeaking(false)
       setVoiceStateMsg('Voice stopped')
+      addAuditLog('voice_stopped', 'success', 'assistant', 'User stopped voice synthesis manually')
       setTimeout(() => setVoiceStateMsg(''), 3000)
       return
     }
@@ -347,6 +395,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     utterance.onstart = () => {
       setIsSpeaking(true)
       setVoiceStateMsg('Reading report...')
+      addAuditLog('voice_played', 'success', 'assistant', 'Voice synthesis started')
     }
     utterance.onend = () => {
       setIsSpeaking(false)
@@ -420,8 +469,14 @@ export default function EmpireAssistant({ open, onToggle }) {
                 <span className="text-white font-semibold">Proactive Voice Monitor</span>
                 <button 
                   onClick={() => {
-                    setMonitorActive(!monitorActive)
-                    if (!monitorActive) runProactiveCheck()
+                    const newStatus = !monitorActive
+                    setMonitorActive(newStatus)
+                    if (newStatus) {
+                      addAuditLog('proactive_monitor_enabled', 'success', 'owner_manual', 'Voice monitor turned ON')
+                      runProactiveCheck()
+                    } else {
+                      addAuditLog('proactive_monitor_disabled', 'success', 'owner_manual', 'Voice monitor turned OFF')
+                    }
                   }}
                   className={`px-3 py-1 rounded-lg font-bold transition-all ${monitorActive ? 'bg-status-live text-obsidian-dark' : 'bg-obsidian-card text-white border border-obsidian-border hover:opacity-80'}`}
                 >
@@ -459,6 +514,32 @@ export default function EmpireAssistant({ open, onToggle }) {
                 <p>Last voice alert: {lastVoiceAlertTime}</p>
                 {firebaseError && <p className="text-status-error font-bold mt-1">Firebase unavailable / local fallback active.</p>}
                 <p className="text-gold/70 mt-1 italic">Voice notification works only while this Control Room tab is open and browser allows audio.</p>
+              </div>
+
+              {/* Keyboard Commander Help */}
+              <div className="pt-2 border-t border-obsidian-border">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Command className="w-3.5 h-3.5 text-gold" />
+                  <span className="text-white font-semibold">Keyboard Commander</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1 text-[9px] text-obsidian-muted font-mono">
+                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
+                    <span>Quick Report</span>
+                    <span className="text-gold-light">Ctrl+Shift+R</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
+                    <span>Security Check</span>
+                    <span className="text-gold-light">Ctrl+Shift+S</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
+                    <span>Next Action</span>
+                    <span className="text-gold-light">Ctrl+Shift+N</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-status-error/10 text-status-error px-2 py-1 rounded border border-status-error/20">
+                    <span>Lockdown</span>
+                    <span className="font-bold">Ctrl+Shift+L</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
