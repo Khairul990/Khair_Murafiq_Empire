@@ -13,6 +13,15 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceStateMsg, setVoiceStateMsg] = useState('')
   const [systemRisk, setSystemRisk] = useState('Safe')
+
+  const [monitorActive, setMonitorActive] = useState(false)
+  const [checkInterval, setCheckInterval] = useState(300000) // 5 min
+  const [quietMode, setQuietMode] = useState(false)
+  const [lastCheckedTime, setLastCheckedTime] = useState('Never')
+  const [lastVoiceAlertTime, setLastVoiceAlertTime] = useState('None')
+  const [firebaseError, setFirebaseError] = useState(false)
+  const [showMonitorSettings, setShowMonitorSettings] = useState(false)
+
   const messagesEndRef = useRef(null)
 
   const loadRisk = async () => {
@@ -40,6 +49,115 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
     loadRisk()
   }, [])
+
+  const speakAlert = (text) => {
+    if (!window.speechSynthesis) return
+    const utterance = new SpeechSynthesisUtterance(text)
+    const voices = window.speechSynthesis.getVoices()
+    const bnVoice = voices.find(v => v.lang.includes('bn'))
+    if (bnVoice) {
+      utterance.voice = bnVoice
+      utterance.lang = bnVoice.lang
+    } else {
+      utterance.lang = 'bn-BD'
+    }
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const runProactiveCheck = async () => {
+    try {
+      const [alerts, tasks, projects] = await Promise.all([
+        storageAdapter.getAlerts(),
+        storageAdapter.getTasks(),
+        storageAdapter.getProjects()
+      ])
+      
+      setFirebaseError(false)
+      const now = new Date()
+      setLastCheckedTime(now.toLocaleTimeString())
+
+      const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+      const criticalOrHighAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
+      const errorProjects = projects.filter(p => p.healthStatus === 'Error')
+      const pendingCriticalTasks = tasks.filter(t => t.status !== 'Done' && t.priority === 'Critical')
+
+      let spokenData = {}
+      try {
+        spokenData = JSON.parse(localStorage.getItem('km_empire_spoken_alerts')) || {}
+      } catch { spokenData = {} }
+
+      let shouldSpeak = false
+      let msgWebsite = ''
+      
+      for (const a of criticalOrHighAlerts) {
+        if (!spokenData[`alert_${a.id}`]) {
+          shouldSpeak = true
+          spokenData[`alert_${a.id}`] = true
+          msgWebsite = a.projectName || ''
+          break
+        }
+      }
+
+      if (!shouldSpeak) {
+        for (const p of errorProjects) {
+          if (!spokenData[`proj_${p.id}`]) {
+            shouldSpeak = true
+            spokenData[`proj_${p.id}`] = true
+            msgWebsite = p.name || ''
+            break
+          }
+        }
+      }
+
+      if (!shouldSpeak) {
+        for (const t of pendingCriticalTasks) {
+          if (!spokenData[`task_${t.id}`]) {
+            shouldSpeak = true
+            spokenData[`task_${t.id}`] = true
+            break
+          }
+        }
+      }
+
+      if (shouldSpeak) {
+        localStorage.setItem('km_empire_spoken_alerts', JSON.stringify(spokenData))
+        
+        let textToSpeak = 'আসসালামু আলাইকুম বস। একটি গুরুত্বপূর্ণ সতর্কবার্তা আছে। আগে Alert Center চেক করুন।'
+        if (msgWebsite) {
+          textToSpeak += ` ${msgWebsite}-এ সমস্যা দেখা গেছে।`
+        }
+        textToSpeak += ' আল্লাহ ভরসা, ধীরে ধীরে নিরাপদভাবে এগোবো।'
+        
+        speakAlert(textToSpeak)
+        setLastVoiceAlertTime(now.toLocaleTimeString())
+      }
+
+    } catch (err) {
+      setFirebaseError(true)
+      const now = new Date()
+      setLastCheckedTime(now.toLocaleTimeString())
+      
+      let spokenData = {}
+      try { spokenData = JSON.parse(localStorage.getItem('km_empire_spoken_alerts')) || {} } catch {}
+      
+      if (!spokenData['firebase_error']) {
+        spokenData['firebase_error'] = true
+        localStorage.setItem('km_empire_spoken_alerts', JSON.stringify(spokenData))
+        speakAlert('Firebase unavailable. Local fallback active.')
+        setLastVoiceAlertTime(now.toLocaleTimeString())
+      }
+    }
+  }
+
+  useEffect(() => {
+    let intervalId
+    if (monitorActive && !quietMode) {
+      intervalId = setInterval(runProactiveCheck, checkInterval)
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [monitorActive, checkInterval, quietMode])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -282,6 +400,14 @@ export default function EmpireAssistant({ open, onToggle }) {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowMonitorSettings(!showMonitorSettings)}
+                className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${
+                  monitorActive ? 'bg-status-live/10 text-status-live border border-status-live/20' : 'bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:bg-obsidian-card'
+                }`}
+              >
+                {monitorActive ? 'Monitor Active' : 'Monitor Off'}
+              </button>
+              <button
                 onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
                 className="px-2 py-1 text-[10px] font-bold rounded-md bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20 transition-colors"
               >
@@ -289,6 +415,55 @@ export default function EmpireAssistant({ open, onToggle }) {
               </button>
             </div>
           </div>
+
+          {/* Voice Monitor Settings */}
+          {showMonitorSettings && (
+            <div className="px-4 py-3 bg-obsidian-dark/80 border-b border-gold/5 text-xs text-obsidian-muted space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-white font-semibold">Proactive Voice Monitor</span>
+                <button 
+                  onClick={() => {
+                    setMonitorActive(!monitorActive)
+                    if (!monitorActive) runProactiveCheck()
+                  }}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${monitorActive ? 'bg-status-live text-obsidian-dark' : 'bg-obsidian-card text-white border border-obsidian-border hover:opacity-80'}`}
+                >
+                  {monitorActive ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span>Check Interval:</span>
+                <select 
+                  value={checkInterval}
+                  onChange={(e) => setCheckInterval(Number(e.target.value))}
+                  className="bg-obsidian-card border border-obsidian-border rounded px-2 py-1 outline-none text-white"
+                >
+                  <option value={300000}>5 min</option>
+                  <option value={600000}>10 min</option>
+                  <option value={1800000}>30 min</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Quiet Mode (Mute):</span>
+                <button 
+                  onClick={() => setQuietMode(!quietMode)}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${quietMode ? 'bg-status-warning text-obsidian-dark' : 'bg-obsidian-card text-white border border-obsidian-border hover:opacity-80'}`}
+                >
+                  {quietMode ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div className="bg-obsidian-card/50 p-2 rounded-lg border border-obsidian-border text-[10px] space-y-1">
+                <p>Status: <span className="text-white font-bold">{monitorActive ? (quietMode ? 'Monitoring but Quiet' : 'Active (Checking...)') : 'Off'}</span></p>
+                <p>Last checked: {lastCheckedTime}</p>
+                <p>Last voice alert: {lastVoiceAlertTime}</p>
+                {firebaseError && <p className="text-status-error font-bold mt-1">Firebase unavailable / local fallback active.</p>}
+                <p className="text-gold/70 mt-1 italic">Voice notification works only while this Control Room tab is open and browser allows audio.</p>
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="px-4 py-3 border-b border-gold/5 flex flex-wrap gap-2">
