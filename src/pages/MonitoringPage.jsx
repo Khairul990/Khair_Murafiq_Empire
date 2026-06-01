@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import monitoring from '../data/monitoring'
 import defaultProjects from '../data/projects'
+import { auth } from '../services/firebaseConfig'
 
 const ALERTS_KEY = 'km_empire_alerts'
 const PROJECTS_KEY = 'km_empire_projects'
@@ -54,7 +55,7 @@ export default function MonitoringPage() {
   }
 
   const handleDeleteAlert = (id) => {
-    if (!localStorage.getItem('km_empire_owner_session')) {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }

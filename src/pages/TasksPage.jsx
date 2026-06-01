@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { loadTasks, saveTasks, getNextId } from '../data/tasks'
 import defaultProjects from '../data/projects'
+import { auth } from '../services/firebaseConfig'
 
 const priorityColors = {
   Critical: 'text-status-error bg-status-error/10 border-status-error/20 animate-pulse',
@@ -94,7 +95,7 @@ export default function TasksPage() {
   }
 
   const handleDelete = (id) => {
-    if (!localStorage.getItem('km_empire_owner_session')) {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }

@@ -4,6 +4,7 @@ import { Search, Filter, Globe, Plus, X, ChevronDown } from 'lucide-react'
 import ProjectCard from '../components/ProjectCard'
 import defaultProjects from '../data/projects'
 import { loadTasks } from '../data/tasks'
+import { auth } from '../services/firebaseConfig'
 
 const PROJECTS_KEY = 'km_empire_projects'
 const ALERTS_KEY = 'km_empire_alerts'
@@ -108,7 +109,7 @@ export default function ProjectsPage() {
   }
 
   const handleEdit = (project) => {
-    if (!localStorage.getItem('km_empire_owner_session')) {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }
@@ -129,7 +130,7 @@ export default function ProjectsPage() {
   }
 
   const handleDelete = (id) => {
-    if (!localStorage.getItem('km_empire_owner_session')) {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }

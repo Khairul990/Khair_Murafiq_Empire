@@ -1,41 +1,50 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ShieldAlert } from 'lucide-react'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { auth } from '../services/firebaseConfig'
 
 const OWNER_EMAIL = 'khairul2052007@gmail.com'
-const DEMO_PASSWORD = 'demo123' // LOCAL DEMO USE ONLY
 
-export default function AuthPage({ onLogin }) {
+export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    setTimeout(() => {
-      const formattedEmail = email.trim().toLowerCase()
-      
-      if (formattedEmail !== OWNER_EMAIL) {
+    const formattedEmail = email.trim().toLowerCase()
+    
+    if (formattedEmail !== OWNER_EMAIL) {
+      setError('Access Denied — Owner only.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, formattedEmail, password)
+      if (userCredential.user.email !== OWNER_EMAIL) {
+        await signOut(auth)
         setError('Access Denied — Owner only.')
-        setLoading(false)
-        return
       }
-
-      if (password !== DEMO_PASSWORD) {
-        setError('Invalid credentials. Access denied.')
-        setLoading(false)
-        return
+    } catch (err) {
+      console.error(err)
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Wrong password. Access denied.')
+      } else if (err.code === 'auth/user-not-found') {
+        setError('User not found.')
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Check your connection.')
+      } else {
+        setError('Login failed: ' + err.message)
       }
-
-      // Success
-      localStorage.setItem('km_empire_owner_session', 'true')
-      if (onLogin) onLogin()
-      
-    }, 800) // fake delay for UI feel
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -54,11 +63,10 @@ export default function AuthPage({ onLogin }) {
           <p className="text-xs font-semibold text-obsidian-muted uppercase tracking-widest">Control Room Authorization</p>
         </div>
 
-        <div className="bg-status-warning/10 border border-status-warning/30 rounded-xl p-3 flex gap-2 items-start mb-6">
-          <ShieldAlert className="w-4 h-4 text-status-warning flex-shrink-0" />
-          <p className="text-[10px] text-status-warning font-bold leading-tight">
-            LOCAL DEMO MODE ACTIVE. Real protection requires Firebase Authentication. 
-            Use password: <span className="font-mono bg-status-warning/20 px-1 rounded">demo123</span>
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex gap-2 items-start mb-6">
+          <ShieldAlert className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          <p className="text-[10px] text-blue-400 font-bold leading-tight mt-0.5">
+            Protected by Firebase Authentication. Owner-only access.
           </p>
         </div>
 
@@ -81,7 +89,7 @@ export default function AuthPage({ onLogin }) {
             />
           </div>
           <div>
-            <label className="text-[10px] text-obsidian-muted uppercase tracking-wider mb-1 block ml-1 font-bold">Demo Password</label>
+            <label className="text-[10px] text-obsidian-muted uppercase tracking-wider mb-1 block ml-1 font-bold">Password</label>
             <input 
               type="password" 
               required

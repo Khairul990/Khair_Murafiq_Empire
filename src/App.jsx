@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { auth } from './services/firebaseConfig'
 
 import AuthPage from './pages/AuthPage'
 import DashboardLayout from './components/DashboardLayout'
@@ -22,26 +24,23 @@ export default function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Local Demo Security Guard
-    const checkSession = () => {
-      const session = localStorage.getItem('km_empire_owner_session')
-      if (session === 'true') {
-        setUser({ email: 'khairul2052007@gmail.com' })
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        if (firebaseUser.email === 'khairul2052007@gmail.com') {
+          setUser(firebaseUser)
+        } else {
+          // Immediately sign out unauthorized users
+          await signOut(auth)
+          setUser(null)
+          alert("Access Denied — Owner only.")
+        }
       } else {
         setUser(null)
       }
       setLoading(false)
-    }
+    })
 
-    checkSession()
-    window.addEventListener('storage', checkSession)
-    
-    // Polling fallback in case localStorage changes in same tab without event trigger
-    const interval = setInterval(checkSession, 1000)
-    return () => {
-      window.removeEventListener('storage', checkSession)
-      clearInterval(interval)
-    }
+    return () => unsubscribe()
   }, [])
 
   if (loading) {
@@ -56,7 +55,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {!user ? (
-          <Route path="*" element={<AuthPage onLogin={() => setUser({ email: 'khairul2052007@gmail.com' })} />} />
+          <Route path="*" element={<AuthPage />} />
         ) : (
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<DashboardPage />} />

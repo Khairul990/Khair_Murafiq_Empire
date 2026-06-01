@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut, Server, CheckCircle, XCircle } from 'lucide-react'
 import { logActivity } from '../data/activity'
 import { firebaseService } from '../services/firebaseService'
+import { signOut } from 'firebase/auth'
+import { auth } from '../services/firebaseConfig'
 
 export default function SettingsPage() {
   const [ecoMode, setEcoMode] = useState(false)
@@ -92,10 +94,13 @@ export default function SettingsPage() {
     window.location.reload()
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('km_empire_owner_session')
-    logActivity('Logged out', 'Owner securely logged out of the dashboard (Local Demo)')
-    window.location.reload()
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      logActivity('Logged out', 'Owner securely logged out via Firebase Auth')
+    } catch (error) {
+      console.error("Logout failed", error)
+    }
   }
 
   const handleTestFirebase = async () => {
@@ -256,24 +261,28 @@ export default function SettingsPage() {
                 <span className="font-bold text-status-warning">Environment variables required</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Owner Login</span>
+                <span className="font-bold text-status-live">Firebase Auth Active</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firebase Auth</span>
+                <span className="font-bold text-status-live">Active</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Storage Mode</span>
+                <span className="font-bold text-status-dev">Local</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Firestore Rules</span>
                 <span className="font-bold text-blue-400">Draft Ready / Not Deployed</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firebase Auth</span>
-                <span className="font-bold text-obsidian-muted">Pending</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Owner Protection</span>
-                <span className="font-bold text-status-warning">Demo Local Only</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Database Protection</span>
-                <span className="font-bold text-status-error">Not Production Ready</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Migration</span>
-                <span className="font-bold text-status-error">Blocked Until Auth + Rules</span>
+                <span className="font-bold text-status-error">Blocked Until Rules Deploy</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Demo Password</span>
+                <span className="font-bold text-obsidian-muted">Removed</span>
               </div>
             </div>
 
@@ -310,7 +319,7 @@ export default function SettingsPage() {
                     <CheckCircle className="w-3 h-3 text-status-live" /> <span className="text-white">Firestore rules draft ready</span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px]">
-                    <XCircle className="w-3 h-3 text-status-warning" /> <span className="text-obsidian-muted">Firebase Auth pending</span>
+                    <CheckCircle className="w-3 h-3 text-status-live" /> <span className="text-white">Firebase Auth Active</span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px]">
                     <CheckCircle className="w-3 h-3 text-blue-400" /> <span className="text-white">Migration blocked</span>
