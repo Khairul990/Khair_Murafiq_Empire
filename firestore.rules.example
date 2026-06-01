@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Khair Murafiq Empire OS - Security Rules Draft
+// Owner Email: khairul2052007@gmail.com
+// 
+// IMPORTANT SECURITY NOTES:
+// 1. Real protection requires Firebase Authentication to be fully implemented.
+// 2. Only the authenticated owner should be able to read/write control room data.
+// 3. Public users must NOT access control_projects, control_tasks, control_alerts, control_settings, control_activity_logs, control_reports.
+// 4. The current demo local login is entirely client-side and is NOT enough for real Firestore protection.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the user is logged in and is the owner
+    function isOwner() {
+      return request.auth != null && request.auth.token.email == 'khairul2052007@gmail.com';
+    }
+
+    // Projects Collection
+    match /control_projects/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Tasks Collection
+    match /control_tasks/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Alerts Collection
+    match /control_alerts/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Settings Collection
+    match /control_settings/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Activity Logs Collection
+    match /control_activity_logs/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Reports Collection
+    match /control_reports/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Connection Tests Collection (Temporary access for testing during migration)
+    // NOTE: This should eventually be locked down with isOwner() as well.
+    match /control_connection_tests/{docId} {
+      allow read, write: if true; // Temporarily open for connection tests before Auth is ready
+    }
+  }
+}
