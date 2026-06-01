@@ -16,6 +16,7 @@ import SocialPage from './pages/SocialPage'
 import AffiliatePage from './pages/AffiliatePage'
 import GoalsPage from './pages/GoalsPage'
 import ReportsPage from './pages/ReportsPage'
+import ApiControlPage from './pages/ApiControlPage'
 import SafetyPage from './pages/SafetyPage'
 import SettingsPage from './pages/SettingsPage'
 
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/api-engine" element={<ApiControlPage />} />
             <Route path="/safety" element={<SafetyPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

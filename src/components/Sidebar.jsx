@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, Activity, Users, ListChecks,
   DollarSign, MessageCircle, Share2, Link, Target,
-  Crown, ChevronLeft, Menu, X, Shield, Bot, FileText, ShieldAlert, Settings
+  Crown, ChevronLeft, Menu, X, Shield, Bot, FileText, ShieldAlert, Settings, Server
 } from 'lucide-react'
 
 const navItems = [
@@ -18,6 +18,7 @@ const navItems = [
   { to: '/affiliate', icon: Link, label: 'Link Tracker' },
   { to: '/goals', icon: Target, label: 'Goals' },
   { to: '/reports', icon: FileText, label: 'Reports Center' },
+  { to: '/api-engine', icon: Server, label: 'API Control Engine' },
   { to: '/safety', icon: ShieldAlert, label: 'Safety Rules' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
