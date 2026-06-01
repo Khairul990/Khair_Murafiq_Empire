@@ -56,8 +56,8 @@ export default function SocialPage() {
     setIsLoading(true)
     try {
       const reports = await storageAdapter.getReports()
-      // Filter for social posts (docType or legacy fields)
-      const social = reports.filter(r => r.docType === 'social_post' || (r.platform && r.caption))
+      // Filter strictly for social posts
+      const social = reports.filter(r => r.docType === 'social_post')
       setPosts(social)
     } catch (err) {
       setErrorMsg('Firebase unavailable. Local fallback active.')
@@ -72,6 +72,7 @@ export default function SocialPage() {
       ...formData,
       id: editingId || Date.now().toString(),
       docType: 'social_post',
+      ownerEmail: auth.currentUser?.email || 'khairul2052007@gmail.com',
       createdAt: editingId ? (posts.find(p => p.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

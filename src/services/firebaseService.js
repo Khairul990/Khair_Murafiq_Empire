@@ -15,7 +15,7 @@ import { doc, setDoc, getDoc, collection, writeBatch, getDocs, deleteDoc } from 
 // Helper to inject standard fields
 const withStandardFields = (data) => ({
   ...data,
-  ownerId: 'khairul2052007@gmail.com', // Placeholder owner
+  ownerEmail: auth.currentUser?.email || 'khairul2052007@gmail.com',
   source: 'local',
   createdAt: data.createdAt || new Date().toISOString(),
   updatedAt: new Date().toISOString()
