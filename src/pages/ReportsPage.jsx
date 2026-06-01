@@ -7,6 +7,7 @@ export default function ReportsPage() {
   const [projects, setProjects] = useState([])
   const [tasks, setTasks] = useState([])
   const [alerts, setAlerts] = useState([])
+  const [reports, setReports] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [timeFilter, setTimeFilter] = useState('All Time')
@@ -15,14 +16,16 @@ export default function ReportsPage() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [p, t, a] = await Promise.all([
+        const [p, t, a, r] = await Promise.all([
           storageAdapter.getProjects(),
           storageAdapter.getTasks(),
-          storageAdapter.getAlerts()
+          storageAdapter.getAlerts(),
+          storageAdapter.getReports()
         ])
         setProjects(p)
         setTasks(t)
         setAlerts(a)
+        setReports(r || [])
       } catch (err) {
         setErrorMsg('Firebase unavailable. Local fallback active.')
       }
@@ -73,6 +76,15 @@ export default function ReportsPage() {
     return hasCritical || p.healthStatus === 'Warning' || p.healthStatus === 'Error'
   })
 
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const thisMonthIncome = reports
+    .filter(r => (r.docType === 'finance_entry' || r.amount !== undefined) && r.type === 'income' && (r.date || '').startsWith(currentMonth))
+    .reduce((sum, r) => sum + Number(r.amount), 0)
+    
+  const plannedSocialPosts = reports
+    .filter(r => r.docType === 'social_post' || (r.platform && r.caption))
+    .length
+
   const summaryCards = [
     { title: 'Total Projects', value: projects.length, icon: Globe, color: 'text-blue-400' },
     { title: 'Healthy Websites', value: healthyProjects.length, icon: CheckCircle, color: 'text-status-live' },
@@ -80,8 +92,8 @@ export default function ReportsPage() {
     { title: 'Active Alerts', value: activeAlerts.length, icon: Activity, color: 'text-status-warning' },
     { title: 'Pending Tasks', value: pendingTasks.length, icon: ListChecks, color: 'text-status-dev' },
     { title: 'Completed Tasks', value: completedTasks.length, icon: FileText, color: 'text-purple-400' },
-    { title: 'This Month Income', value: '$0.00', icon: DollarSign, color: 'text-gold', note: 'Module pending' },
-    { title: 'Social Posts Planned', value: '0', icon: Share2, color: 'text-obsidian-muted', note: 'Module pending' }
+    { title: 'This Month Income', value: `$${thisMonthIncome.toFixed(2)}`, icon: DollarSign, color: 'text-gold' },
+    { title: 'Social Posts Planned', value: plannedSocialPosts, icon: Share2, color: 'text-obsidian-muted' }
   ]
 
   const handleDownloadPDF = () => {

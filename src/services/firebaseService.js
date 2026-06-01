@@ -71,6 +71,19 @@ export const firebaseService = {
     await deleteDoc(doc(db, "control_alerts", String(id)))
   },
 
+  // REPORTS (Social, Finance, etc)
+  getReports: async () => await getCollectionData('control_reports'),
+  saveReport: async (report) => {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await setDoc(doc(db, "control_reports", String(report.id)), withStandardFields(report))
+    return report
+  },
+  deleteReport: async (id) => {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await deleteDoc(doc(db, "control_reports", String(id)))
+  },
+
+
   // CONNECTION TEST
   testFirebaseConnection: async () => {
     try {

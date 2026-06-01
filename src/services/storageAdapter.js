@@ -84,5 +84,23 @@ export const storageAdapter = {
   },
   deleteAlert: async (id, allAlerts) => {
     await cloudOperation(() => firebaseService.deleteAlert(id), 'km_empire_alerts', allAlerts)
+  },
+
+  getReports: async () => {
+    if (storageMode === 'firebase') {
+      try {
+        return await firebaseService.getReports()
+      } catch (err) {
+        console.warn('Firebase read failed. Showing local backup data.', err)
+        return localFallback.get('km_empire_reports')
+      }
+    }
+    return localFallback.get('km_empire_reports')
+  },
+  saveReport: async (report, allReports) => {
+    await cloudOperation(() => firebaseService.saveReport(report), 'km_empire_reports', allReports)
+  },
+  deleteReport: async (id, allReports) => {
+    await cloudOperation(() => firebaseService.deleteReport(id), 'km_empire_reports', allReports)
   }
 }

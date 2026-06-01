@@ -25,10 +25,11 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const generateReport = async () => {
     try {
-      const [projects, tasks, alerts] = await Promise.all([
+      const [projects, tasks, alerts, reports] = await Promise.all([
         storageAdapter.getProjects(),
         storageAdapter.getTasks(),
-        storageAdapter.getAlerts()
+        storageAdapter.getAlerts(),
+        storageAdapter.getReports()
       ])
 
       const pendingTasks = tasks.filter(t => t.status !== 'Done')
@@ -62,6 +63,21 @@ export default function EmpireAssistant({ open, onToggle }) {
           bnText += `• ${p.name} (${p.healthStatus || 'Unknown'})\n`
         })
         bnText += `\n`
+      }
+
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      const thisMonthIncome = (reports || [])
+        .filter(r => (r.docType === 'finance_entry' || r.amount !== undefined) && r.type === 'income' && (r.date || '').startsWith(currentMonth))
+        .reduce((sum, r) => sum + Number(r.amount), 0)
+        
+      const plannedSocialPosts = (reports || [])
+        .filter(r => r.docType === 'social_post' || (r.platform && r.caption))
+        .length
+
+      if (plannedSocialPosts > 0 || thisMonthIncome > 0) {
+        bnText += `📊 বিজনেস আপডেট:\n`
+        bnText += `• এই মাসের আয়: $${thisMonthIncome.toFixed(2)}\n`
+        bnText += `• সোশ্যাল পোস্ট প্ল্যান করা আছে: ${plannedSocialPosts}টি\n\n`
       }
 
       bnText += `🛑 Safe Action Rules:\n`
