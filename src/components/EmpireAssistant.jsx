@@ -11,6 +11,7 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [lang, setLang] = useState('bn') // default to Bengali
   const [isTyping, setIsTyping] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [voiceStateMsg, setVoiceStateMsg] = useState('')
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -128,9 +129,16 @@ export default function EmpireAssistant({ open, onToggle }) {
   }
 
   const handleVoice = () => {
+    if (!window.speechSynthesis) {
+      setVoiceStateMsg('Voice not supported on this browser')
+      return
+    }
+
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel()
       setIsSpeaking(false)
+      setVoiceStateMsg('Voice stopped')
+      setTimeout(() => setVoiceStateMsg(''), 3000)
       return
     }
 
@@ -158,9 +166,20 @@ export default function EmpireAssistant({ open, onToggle }) {
       }
     }
     
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
+    utterance.onstart = () => {
+      setIsSpeaking(true)
+      setVoiceStateMsg('Reading report...')
+    }
+    utterance.onend = () => {
+      setIsSpeaking(false)
+      setVoiceStateMsg('Voice stopped')
+      setTimeout(() => setVoiceStateMsg(''), 3000)
+    }
+    utterance.onerror = () => {
+      setIsSpeaking(false)
+      setVoiceStateMsg('Voice stopped')
+      setTimeout(() => setVoiceStateMsg(''), 3000)
+    }
     
     window.speechSynthesis.speak(utterance)
   }
@@ -225,6 +244,13 @@ export default function EmpireAssistant({ open, onToggle }) {
               )}
             </button>
           </div>
+
+          {/* Voice State Feedback */}
+          {voiceStateMsg && (
+            <div className="px-5 py-1.5 bg-obsidian-dark text-[10px] text-gold text-center border-b border-gold/5 font-medium animate-pulse">
+              {voiceStateMsg}
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden">
