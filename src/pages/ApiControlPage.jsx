@@ -108,7 +108,7 @@ export default function ApiControlPage() {
               ].map((sw, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-obsidian-dark border border-obsidian-border">
                   <span className="text-xs text-white font-medium">{sw.label}</span>
-                  <button className={`w-8 h-4 rounded-full flex items-center transition-colors ${sw.active ? 'bg-status-error justify-end' : 'bg-obsidian-card justify-start'}`}>
+                  <button onClick={() => alert('Demo only — no real API action performed.')} className={`w-8 h-4 rounded-full flex items-center transition-colors ${sw.active ? 'bg-status-error justify-end' : 'bg-obsidian-card justify-start'}`}>
                     <div className="w-3 h-3 rounded-full bg-white mx-0.5 shadow" />
                   </button>
                 </div>
@@ -133,7 +133,7 @@ export default function ApiControlPage() {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => alert('Mock: Approve Action Disabled')} className="flex-1 py-1.5 rounded-lg text-xs font-bold gold-gradient text-obsidian-dark hover:opacity-90 transition-all">Approve</button>
-                  <button className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-white transition-all">Reject</button>
+                  <button onClick={() => alert('Mock: Reject Action Disabled')} className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-white transition-all">Reject</button>
                 </div>
               </div>
             </div>
