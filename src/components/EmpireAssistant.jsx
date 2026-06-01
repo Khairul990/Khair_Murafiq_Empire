@@ -444,7 +444,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       {!open && (
         <button
           onClick={onToggle}
-          className="fixed bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-gold-lg gold-gradient hover:shadow-gold-lg"
+          className="fixed bottom-6 right-4 md:right-6 z-[9999] w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-gold-lg gold-gradient hover:shadow-gold-lg"
         >
           <Bot className="w-6 h-6 text-obsidian-dark" />
         </button>
@@ -452,7 +452,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       {/* Assistant Panel */}
       {open && (
-        <div className="fixed bottom-[90px] md:bottom-[110px] right-3 md:right-6 z-50 w-[calc(100vw-24px)] md:w-[360px] h-[500px] max-h-[70vh] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
+        <div className="fixed bottom-[90px] md:bottom-[110px] right-3 md:right-6 z-[9999] w-[calc(100vw-24px)] md:w-[360px] h-[500px] max-h-[70vh] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gold/10 bg-obsidian-dark/50 rounded-t-2xl">
             <div className="flex items-center gap-3">

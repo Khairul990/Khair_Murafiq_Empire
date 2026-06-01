@@ -86,7 +86,7 @@ export default function AssistantSettingsPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6 max-w-5xl mx-auto"
+      className="space-y-6 max-w-5xl mx-auto pb-24"
     >
       <div>
         <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-3">
