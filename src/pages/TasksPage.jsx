@@ -94,6 +94,10 @@ export default function TasksPage() {
   }
 
   const handleDelete = (id) => {
+    if (!localStorage.getItem('km_empire_owner_session')) {
+      alert("Access Denied: Owner login required for this dangerous action.")
+      return
+    }
     if (window.confirm("Are you sure you want to delete this task?")) {
       const updated = tasks.filter(t => t.id !== id)
       setTasks(updated)

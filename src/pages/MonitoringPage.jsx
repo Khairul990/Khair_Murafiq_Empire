@@ -54,7 +54,11 @@ export default function MonitoringPage() {
   }
 
   const handleDeleteAlert = (id) => {
-    if (window.confirm('Are you sure you want to delete this alert?')) {
+    if (!localStorage.getItem('km_empire_owner_session')) {
+      alert("Access Denied: Owner login required for this dangerous action.")
+      return
+    }
+    if (window.confirm("Are you sure you want to delete this alert?")) {
       setAlerts(alerts.filter(a => a.id !== id))
     }
   }

@@ -108,6 +108,10 @@ export default function ProjectsPage() {
   }
 
   const handleEdit = (project) => {
+    if (!localStorage.getItem('km_empire_owner_session')) {
+      alert("Access Denied: Owner login required for this dangerous action.")
+      return
+    }
     setFormData({
       name: project.name || '',
       id: project.id || '',
@@ -125,6 +129,10 @@ export default function ProjectsPage() {
   }
 
   const handleDelete = (id) => {
+    if (!localStorage.getItem('km_empire_owner_session')) {
+      alert("Access Denied: Owner login required for this dangerous action.")
+      return
+    }
     if (window.confirm('Are you sure you want to delete this website? This action cannot be undone.')) {
       setProjects(projects.filter(p => p.id !== id))
     }

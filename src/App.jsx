@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from './services/firebase'
 
 import AuthPage from './pages/AuthPage'
 import DashboardLayout from './components/DashboardLayout'
@@ -24,18 +22,26 @@ export default function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser && currentUser.email === 'khairul2052007@gmail.com') {
-        setUser(currentUser)
+    // Local Demo Security Guard
+    const checkSession = () => {
+      const session = localStorage.getItem('km_empire_owner_session')
+      if (session === 'true') {
+        setUser({ email: 'khairul2052007@gmail.com' })
       } else {
         setUser(null)
-        if (currentUser) {
-          auth.signOut()
-        }
       }
       setLoading(false)
-    })
-    return () => unsubscribe()
+    }
+
+    checkSession()
+    window.addEventListener('storage', checkSession)
+    
+    // Polling fallback in case localStorage changes in same tab without event trigger
+    const interval = setInterval(checkSession, 1000)
+    return () => {
+      window.removeEventListener('storage', checkSession)
+      clearInterval(interval)
+    }
   }, [])
 
   if (loading) {
@@ -50,7 +56,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {!user ? (
-          <Route path="*" element={<AuthPage />} />
+          <Route path="*" element={<AuthPage onLogin={() => setUser({ email: 'khairul2052007@gmail.com' })} />} />
         ) : (
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<DashboardPage />} />

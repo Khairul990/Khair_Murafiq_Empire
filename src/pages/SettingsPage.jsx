@@ -2,8 +2,6 @@ import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut, Server } from 'lucide-react'
 import { logActivity } from '../data/activity'
-import { auth } from '../services/firebase'
-import { signOut } from 'firebase/auth'
 
 export default function SettingsPage() {
   const [ecoMode, setEcoMode] = useState(false)
@@ -90,13 +88,10 @@ export default function SettingsPage() {
     window.location.reload()
   }
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth)
-      logActivity('Logged out', 'Owner securely logged out of the dashboard')
-    } catch (e) {
-      alert("Failed to log out")
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('km_empire_owner_session')
+    logActivity('Logged out', 'Owner securely logged out of the dashboard (Local Demo)')
+    window.location.reload()
   }
 
   return (
@@ -245,16 +240,24 @@ export default function SettingsPage() {
                 <span className="font-bold text-status-dev">Local Browser Storage</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firebase Status</span>
-                <span className="font-bold text-obsidian-muted">Not Connected</span>
+                <span className="text-obsidian-muted font-bold">Owner Login</span>
+                <span className="font-bold text-status-warning">Demo Local Mode</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Owner Auth</span>
+                <span className="text-obsidian-muted font-bold">Firebase Auth</span>
                 <span className="font-bold text-obsidian-muted">Pending</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Security Rules</span>
-                <span className="font-bold text-obsidian-muted">Pending</span>
+                <span className="text-obsidian-muted font-bold">Delete Protection</span>
+                <span className="font-bold text-status-live">Enabled</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Dangerous Actions</span>
+                <span className="font-bold text-blue-400">Owner Approval Required</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Secrets in Frontend</span>
+                <span className="font-bold text-status-live">Not Allowed</span>
               </div>
             </div>
 
@@ -269,9 +272,10 @@ export default function SettingsPage() {
               </div>
               
               <div className="bg-status-error/10 border border-status-error/30 rounded-xl p-3 flex gap-2 items-start mt-4">
-                <AlertTriangle className="w-4 h-4 text-status-error flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-status-error flex-shrink-0" />
                 <p className="text-[10px] text-status-error font-bold leading-tight">
-                  WARNING: Firebase private keys or service accounts must never be stored in frontend code or GitHub.
+                  This is a local demo security guard. Real protection requires Firebase Authentication and Firestore Security Rules. 
+                  Firebase private keys or service accounts must never be stored in frontend code or GitHub.
                 </p>
               </div>
             </div>
