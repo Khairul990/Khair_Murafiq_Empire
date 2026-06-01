@@ -10,7 +10,14 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [input, setInput] = useState('')
   const [lang, setLang] = useState('bn') // default to Bengali
   const [isTyping, setIsTyping] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const messagesEndRef = useRef(null)
+
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices()
+    }
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -104,6 +111,44 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
   }
 
+  const handleVoice = () => {
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel()
+      setIsSpeaking(false)
+      return
+    }
+
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant')
+    if (!lastAssistantMsg) return
+    
+    let textToSpeak = typeof lastAssistantMsg.text === 'object' ? (lastAssistantMsg.text[lang] || lastAssistantMsg.text.bn || lastAssistantMsg.text.en) : lastAssistantMsg.text
+    
+    // Clean text for speech
+    textToSpeak = textToSpeak.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    textToSpeak = textToSpeak.replace(/\*/g, '')
+    
+    const utterance = new SpeechSynthesisUtterance(textToSpeak)
+    
+    const voices = window.speechSynthesis.getVoices()
+    const bnVoice = voices.find(v => v.lang.includes('bn'))
+    
+    if (bnVoice) {
+      utterance.voice = bnVoice
+      utterance.lang = bnVoice.lang
+    } else {
+      utterance.lang = 'bn-BD'
+      if (!messages.some(m => m.text === 'বাংলা voice আপনার browser/device-এ পাওয়া যায়নি, default voice ব্যবহার হচ্ছে।')) {
+        setMessages(prev => [...prev, { role: 'assistant', text: 'বাংলা voice আপনার browser/device-এ পাওয়া যায়নি, default voice ব্যবহার হচ্ছে।' }])
+      }
+    }
+    
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
+    
+    window.speechSynthesis.speak(utterance)
+  }
+
   return (
     <>
       {/* Floating Button */}
@@ -144,17 +189,24 @@ export default function EmpireAssistant({ open, onToggle }) {
           <div className="px-4 py-3 border-b border-gold/5 flex flex-wrap gap-2">
             <button 
               onClick={() => handleSend(lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-gold hover:border-gold/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-gold hover:border-gold/30 transition-colors whitespace-nowrap"
             >
               <FileText className="w-3.5 h-3.5" />
               {lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report'}
             </button>
             <button 
-              onClick={() => alert('Voice mode coming later.')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
+              onClick={handleVoice}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap transition-colors ${
+                isSpeaking 
+                  ? 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
+                  : 'bg-obsidian-card text-obsidian-muted border-obsidian-border hover:text-white'
+              }`}
             >
-              <Mic className="w-3.5 h-3.5" />
-              {lang === 'bn' ? 'ভয়েস (Coming soon)' : 'Voice Mode'}
+              {isSpeaking ? (
+                <>⏹ {lang === 'bn' ? 'বন্ধ করুন' : 'Stop'}</>
+              ) : (
+                <>🔊 {lang === 'bn' ? 'রিপোর্ট শুনুন' : 'Listen Report'}</>
+              )}
             </button>
           </div>
 
