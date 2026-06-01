@@ -12,12 +12,33 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [isTyping, setIsTyping] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceStateMsg, setVoiceStateMsg] = useState('')
+  const [systemRisk, setSystemRisk] = useState('Safe')
   const messagesEndRef = useRef(null)
+
+  const loadRisk = async () => {
+    try {
+      const [alerts, tasks] = await Promise.all([
+        storageAdapter.getAlerts(),
+        storageAdapter.getTasks()
+      ])
+      const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+      const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
+      const pendingTasks = tasks.filter(t => t.status !== 'Done')
+      
+      if (criticalAlerts.some(a => a.severity === 'Critical')) setSystemRisk('Critical')
+      else if (criticalAlerts.length > 0) setSystemRisk('Warning')
+      else if (pendingTasks.length > 5) setSystemRisk('Need Review')
+      else setSystemRisk('Safe')
+    } catch {
+      setSystemRisk('Safe')
+    }
+  }
 
   useEffect(() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.getVoices()
     }
+    loadRisk()
   }, [])
 
   useEffect(() => {
@@ -41,30 +62,19 @@ export default function EmpireAssistant({ open, onToggle }) {
         const hasCritical = pAlerts.some(a => a.severity === 'Critical')
         return hasCritical || p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown'
       })
+      const healthyProjects = projects.filter(p => {
+        const pAlerts = activeAlerts.filter(a => a.projectId === p.id)
+        const hasCritical = pAlerts.some(a => a.severity === 'Critical')
+        return p.healthStatus === 'Healthy' && !hasCritical
+      })
 
-      let bnText = `আসসালামু আলাইকুম বস। আজ আপনার Control Room-এ ${activeAlerts.length}টা alert আছে, ${pendingTasks.length}টা task pending আছে।\n\n`
-
-      if (criticalAlerts.length > 0) {
-        bnText += `🚨 গুরুত্বপূর্ণ warning আছে। আগে Alert Center check করুন।\n\n`
-      } else {
-        bnText += `✅ আগে High/Critical alert check করা ভালো, তবে বর্তমানে কোনো ক্রিটিক্যাল অ্যালার্ট নেই।\n\n`
-      }
-
-      if (pendingTasks.length > 0) {
-        bnText += `📋 টপ পেন্ডিং টাস্ক:\n`
-        pendingTasks.slice(0, 3).forEach(t => {
-          bnText += `• ${t.title} (${t.priority})\n`
-        })
-        bnText += `\n`
-      }
-
-      if (warningProjects.length > 0) {
-        bnText += `⚠️ Health Warning/Unknown:\n`
-        warningProjects.slice(0, 3).forEach(p => {
-          bnText += `• ${p.name} (${p.healthStatus || 'Unknown'})\n`
-        })
-        bnText += `\n`
-      }
+      let priorities = []
+      if (criticalAlerts.length > 0) priorities.push('• Fix Critical/High alerts first')
+      if (pendingTasks.length > 0) priorities.push('• Complete overdue/high priority tasks')
+      if (warningProjects.length > 0) priorities.push('• Update Unknown/Error website health')
+      priorities.push('• Take backup before risky work')
+      priorities.push('• Do not touch API secrets')
+      priorities = priorities.slice(0, 3)
 
       const currentMonth = new Date().toISOString().slice(0, 7)
       const thisMonthIncome = (reports || [])
@@ -75,16 +85,38 @@ export default function EmpireAssistant({ open, onToggle }) {
         .filter(r => r.docType === 'social_post' || (r.platform && r.caption))
         .length
 
-      if (plannedSocialPosts > 0 || thisMonthIncome > 0) {
-        bnText += `📊 বিজনেস আপডেট:\n`
-        bnText += `• এই মাসের আয়: $${thisMonthIncome.toFixed(2)}\n`
-        bnText += `• সোশ্যাল পোস্ট প্ল্যান করা আছে: ${plannedSocialPosts}টি\n\n`
+      let bnText = `আসসালামু আলাইকুম বস।\n\n`
+      bnText += `📊 Overall Status: ${systemRisk}\n\n`
+      
+      bnText += `🌐 Website Health Summary:\n`
+      bnText += `Healthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
+
+      if (criticalAlerts.length > 0) {
+        bnText += `🚨 Critical/High Alerts: ${criticalAlerts.length}টি আছে। দয়া করে Alert Center দেখুন।\n\n`
+      } else {
+        bnText += `✅ কোনো Critical/High অ্যালার্ট নেই।\n\n`
       }
 
-      bnText += `🛑 Safe Action Rules:\n`
-      bnText += `• Owner approval ছাড়া risky action করবেন না\n`
-      bnText += `• Backup ছাড়া migration/delete করবেন না\n`
-      bnText += `• API key frontend/GitHub-এ রাখবেন না\n\n`
+      if (pendingTasks.length > 0) {
+        bnText += `📋 Pending Tasks: ${pendingTasks.length}টি\n\n`
+      }
+
+      if (plannedSocialPosts > 0 || thisMonthIncome > 0) {
+        bnText += `💼 Social/Finance Summary:\n`
+        bnText += `এই মাসের আয়: $${thisMonthIncome.toFixed(2)}, সোশ্যাল পোস্ট: ${plannedSocialPosts}টি\n\n`
+      }
+
+      bnText += `🎯 Top Recommended Actions:\n`
+      priorities.forEach(p => bnText += `${p}\n`)
+      bnText += `\n`
+
+      bnText += `🛑 Safe Action Rules (Reminder):\n`
+      bnText += `• No API key/token/password in frontend/GitHub\n`
+      bnText += `• Backup before delete/migration\n`
+      bnText += `• Owner approval before risky action\n`
+      bnText += `• Real API only through backend/serverless later\n`
+      bnText += `• Mock features should be clearly called mock/manual\n\n`
+
       bnText += `✨ আল্লাহ ভরসা, ধীরে ধীরে নিরাপদভাবে এগোবো।`
 
       let enText = `System Report generated successfully. Alerts: ${activeAlerts.length}, Pending Tasks: ${pendingTasks.length}. (Please switch to Bengali for detailed AI tone).`
@@ -109,6 +141,34 @@ export default function EmpireAssistant({ open, onToggle }) {
     if (reportCommands.includes(cmd)) {
       const report = await generateReport()
       setMessages(prev => [...prev, { role: 'assistant', text: report }])
+      setIsTyping(false)
+      return
+    }
+
+    if (cmd === 'এই পেজে কী করব?') {
+      const txt = 'বর্তমানে আপনি যে পেজে আছেন, সেখানে mock features থাকতে পারে। রিয়েল API কানেক্ট করার আগে কোনো গোপন তথ্য দেবেন না এবং Backup নিয়ে কাজ করবেন।\n\nMock features should be clearly called mock/manual.'
+      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      setIsTyping(false)
+      return
+    }
+
+    if (cmd === 'security check করো') {
+      const txt = 'Security Check Report:\n• No API key/token/password in frontend/GitHub\n• Firebase Web SDK only uses public config\n• Firestore Rules block unauthorized writes\n• Local Storage is acting as fallback\n\nOverall: Safe Mode Active.'
+      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      setIsTyping(false)
+      return
+    }
+
+    if (cmd === 'next কাজ বলো') {
+      const txt = 'Recommended Next Safe Action:\n১. প্রথমে Alerts প্যানেল চেক করে Critical issue থাকলে ফিক্স করুন।\n২. Task list থেকে Urgent কাজ শেষ করুন।\n৩. নতুন কোনো update দেওয়ার আগে Data Export (Backup) করে নিন।'
+      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      setIsTyping(false)
+      return
+    }
+
+    if (cmd === 'short voice report') {
+      const txt = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। আজকে কিছু টাস্ক এবং অ্যালার্ট পেন্ডিং আছে। রিয়েল এপিআই ব্যবহার না করে মক মোডে কাজ করুন। আল্লাহ ভরসা, নিরাপদভাবে এগিয়ে যান।`
+      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
       setIsTyping(false)
       return
     }
@@ -206,7 +266,17 @@ export default function EmpireAssistant({ open, onToggle }) {
                 <Sparkles className="w-4 h-4 text-obsidian-dark" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-sm">Empire AI</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white font-bold text-sm">Empire AI</h3>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border uppercase ${
+                    systemRisk === 'Critical' ? 'bg-status-error/10 text-status-error border-status-error/30' :
+                    systemRisk === 'Warning' ? 'bg-status-warning/10 text-status-warning border-status-warning/30' :
+                    systemRisk === 'Need Review' ? 'bg-status-dev/10 text-status-dev border-status-dev/30' :
+                    'bg-status-live/10 text-status-live border-status-live/30'
+                  }`}>
+                    {systemRisk}
+                  </span>
+                </div>
                 <p className="text-[10px] text-obsidian-muted">Control Room Manager</p>
               </div>
             </div>
@@ -242,6 +312,18 @@ export default function EmpireAssistant({ open, onToggle }) {
               ) : (
                 <>🔊 {lang === 'bn' ? 'রিপোর্ট শুনুন' : 'Listen Report'}</>
               )}
+            </button>
+            <button onClick={() => handleSend('এই পেজে কী করব?')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
+              এই পেজে কী করব?
+            </button>
+            <button onClick={() => handleSend('Security check করো')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
+              Security check করো
+            </button>
+            <button onClick={() => handleSend('Next কাজ বলো')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
+              Next কাজ বলো
+            </button>
+            <button onClick={() => handleSend('Short voice report')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
+              Short voice report
             </button>
           </div>
 
