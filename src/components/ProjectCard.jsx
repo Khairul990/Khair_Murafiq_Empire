@@ -19,7 +19,7 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
   const criticalHighCount = projectAlerts.filter(a => a.severity === 'Critical' || a.severity === 'High').length
 
   const projectTasks = tasks.filter(t => t.projectId === project.id)
-  const activeTasks = projectTasks.filter(t => t.status !== 'Completed')
+  const activeTasks = projectTasks.filter(t => t.status !== 'Done')
   const hasBlockedOrCriticalTask = activeTasks.some(t => t.status === 'Blocked' || t.priority === 'Critical')
 
   return (
@@ -42,8 +42,10 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
               </span>
             )}
             <div className="relative">
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border text-blue-400 bg-blue-400/10 border-blue-400/30">
-                {projectTasks.length} {projectTasks.length === 1 ? 'Task' : 'Tasks'}
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                activeTasks.length > 0 ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' : 'text-obsidian-muted bg-obsidian-light border-obsidian-border'
+              }`}>
+                {activeTasks.length === 0 ? 'No Tasks' : `${activeTasks.length} ${activeTasks.length === 1 ? 'Task' : 'Tasks'}`}
               </span>
               {hasBlockedOrCriticalTask && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>

@@ -9,14 +9,23 @@ import GoalCard from '../components/GoalCard'
 import stats from '../data/stats'
 import challenge from '../data/challenge'
 
+import { TASKS_KEY } from '../data/tasks'
+
 export default function DashboardPage() {
   const navigate = useNavigate()
+  
+  // Real active task count
+  let realActiveTasks = 0
+  try {
+    const t = JSON.parse(localStorage.getItem(TASKS_KEY))
+    if (t) realActiveTasks = t.filter(x => x.status !== 'Done').length
+  } catch {}
 
   const cards = [
     { icon: FolderKanban, label: 'Total Projects', value: stats.totalProjects, trend: '+1 this month', color: 'gold', onClick: () => navigate('/projects') },
     { icon: Globe, label: 'Live Websites', value: stats.liveWebsites, trend: 'BillQyro live', color: 'green', onClick: () => navigate('/projects') },
     { icon: AlertTriangle, label: 'Active Alerts', value: stats.activeAlerts, trend: '2 warnings', color: 'warning', onClick: () => navigate('/monitoring') },
-    { icon: ListChecks, label: 'Pending Tasks', value: stats.pendingTasks, trend: `${stats.staffTasksPending} staff tasks`, color: 'blue', onClick: () => navigate('/tasks') },
+    { icon: ListChecks, label: 'Pending Tasks', value: realActiveTasks, trend: `${realActiveTasks} need action`, color: 'blue', onClick: () => navigate('/tasks') },
     { icon: Share2, label: 'Social Posts Planned', value: stats.socialPostsPlanned, trend: '5 platforms', color: 'purple', onClick: () => navigate('/social') },
     { icon: DollarSign, label: 'Estimated Income', value: `$${stats.estimatedIncome}`, trend: 'This month', color: 'green', onClick: () => navigate('/finance') },
     { icon: MessageCircle, label: 'WhatsApp Alert', value: stats.whatsappConnected ? 'Connected' : 'Offline', trend: stats.whatsappConnected ? 'Active' : 'Not connected', color: stats.whatsappConnected ? 'green' : 'error', onClick: () => navigate('/whatsapp') },

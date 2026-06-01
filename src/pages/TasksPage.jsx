@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   ListChecks, Plus, Trash2, CheckCircle, Clock, AlertCircle,
-  Calendar, FolderKanban, X, AlignLeft
+  Calendar, FolderKanban, X, AlignLeft, User, Search
 } from 'lucide-react'
 import { loadTasks, saveTasks, getNextId } from '../data/tasks'
 import defaultProjects from '../data/projects'
@@ -16,9 +16,9 @@ const priorityColors = {
 
 const statusColors = {
   Pending: 'text-obsidian-muted bg-obsidian-card border-obsidian-border',
-  'In Progress': 'text-status-dev bg-status-dev/10 border-status-dev/30',
-  Completed: 'text-status-live bg-status-live/10 border-status-live/30',
-  Blocked: 'text-status-error bg-status-error/10 border-status-error/30',
+  Working: 'text-status-dev bg-status-dev/10 border-status-dev/30',
+  Review: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
+  Done: 'text-status-live bg-status-live/10 border-status-live/30',
 }
 
 const loadAllProjects = () => {
@@ -44,9 +44,11 @@ export default function TasksPage() {
   
   const [filter, setFilter] = useState('All')
   const [projectFilter, setProjectFilter] = useState('All')
+  const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  
   const [newTask, setNewTask] = useState({ 
-    title: '', description: '', projectId: '', priority: 'Medium', dueDate: '' 
+    title: '', description: '', projectId: '', assignedTo: 'Khairul', priority: 'Medium', status: 'Pending', dueDate: '' 
   })
 
   useEffect(() => {
@@ -57,7 +59,9 @@ export default function TasksPage() {
   const filtered = tasks.filter(t => {
     const matchStatus = filter === 'All' || t.status === filter
     const matchProject = projectFilter === 'All' || t.projectId === projectFilter
-    return matchStatus && matchProject
+    const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
+                        (t.description && t.description.toLowerCase().includes(search.toLowerCase()))
+    return matchStatus && matchProject && matchSearch
   })
 
   const handleAdd = (e) => {
@@ -73,14 +77,13 @@ export default function TasksPage() {
       projectId: pId,
       projectName: pName,
       id: getNextId(tasks).toString(), 
-      status: 'Pending', 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }, ...tasks]
     
     setTasks(updated)
     saveTasks(updated)
-    setNewTask({ title: '', description: '', projectId: '', priority: 'Medium', dueDate: '' })
+    setNewTask({ title: '', description: '', projectId: '', assignedTo: 'Khairul', priority: 'Medium', status: 'Pending', dueDate: '' })
     setShowAdd(false)
   }
 
@@ -98,7 +101,6 @@ export default function TasksPage() {
     }
   }
 
-  // Extract unique projects from current tasks and loaded projects for the filter
   const uniqueProjectFilters = [
     { id: 'All', name: 'All Projects' },
     { id: 'general', name: 'General / No Project' },
@@ -119,7 +121,7 @@ export default function TasksPage() {
             Empire <span className="gold-gradient-text">Task Manager</span>
           </h1>
           <p className="text-xs text-obsidian-muted mt-1">
-            {tasks.filter(t => t.status !== 'Completed').length} active tasks · {tasks.filter(t => t.status === 'Completed').length} completed
+            {tasks.filter(t => t.status !== 'Done').length} active tasks · {tasks.filter(t => t.status === 'Done').length} completed
           </p>
         </div>
         <button
@@ -137,26 +139,28 @@ export default function TasksPage() {
           onSubmit={handleAdd}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-2xl p-5 border border-gold/20"
+          className="glass-card rounded-2xl p-5 border border-gold/20 shadow-2xl"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-4">Create New Task</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+            
             <div className="space-y-1 lg:col-span-2">
-              <label className="text-[11px] text-obsidian-muted font-medium ml-1">Task Title *</label>
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Task Title *</label>
               <input
                 required
                 value={newTask.title}
                 onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                 placeholder="What needs to be done?"
-                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-obsidian-muted font-medium ml-1">Assign to Project</label>
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Website / Project</label>
               <select
                 value={newTask.projectId}
                 onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value })}
-                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
               >
                 <option value="">General / No Project</option>
                 {allProjects.map(p => (
@@ -166,11 +170,21 @@ export default function TasksPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-obsidian-muted font-medium ml-1">Priority</label>
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Assigned To</label>
+              <input
+                value={newTask.assignedTo}
+                onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
+                placeholder="e.g. Khairul"
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Priority</label>
               <select
                 value={newTask.priority}
                 onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -178,9 +192,33 @@ export default function TasksPage() {
                 <option value="Critical">Critical</option>
               </select>
             </div>
+            
+            <div className="space-y-1">
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Status</label>
+              <select
+                value={newTask.status}
+                onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+              >
+                <option value="Pending">Pending</option>
+                <option value="Working">Working</option>
+                <option value="Review">Review</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
 
-            <div className="space-y-1 lg:col-span-3">
-              <label className="text-[11px] text-obsidian-muted font-medium ml-1">Description</label>
+            <div className="space-y-1">
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Due Date</label>
+              <input
+                type="date"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1 lg:col-span-3 xl:col-span-4">
+              <label className="text-[11px] text-obsidian-muted font-bold uppercase tracking-wider ml-1">Description</label>
               <textarea
                 value={newTask.description}
                 onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -188,16 +226,7 @@ export default function TasksPage() {
                 className="w-full h-16 resize-none bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
               />
             </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] text-obsidian-muted font-medium ml-1">Due Date</label>
-              <input
-                type="date"
-                value={newTask.dueDate}
-                onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/30 transition-colors"
-              />
-            </div>
+            
           </div>
 
           <div className="flex gap-3">
@@ -212,11 +241,20 @@ export default function TasksPage() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+        <div className="relative w-full md:w-64 flex-shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-obsidian-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks..."
+            className="w-full bg-obsidian-card border border-obsidian-border rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-obsidian-muted focus:outline-none focus:border-gold/30 transition-colors"
+          />
+        </div>
         <div className="flex flex-wrap gap-1.5 flex-1">
-          {['All', 'Pending', 'In Progress', 'Blocked', 'Completed'].map(s => (
+          {['All', 'Pending', 'Working', 'Review', 'Done'].map(s => (
             <button key={s} onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                 filter === s ? 'bg-gold/10 text-gold border border-gold/20' : 'bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-white'
               }`}
             >
@@ -227,7 +265,7 @@ export default function TasksPage() {
         <select
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
-          className="bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-2 text-xs font-medium text-white focus:outline-none focus:border-gold/30 transition-colors max-w-[200px]"
+          className="bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider text-white focus:outline-none focus:border-gold/30 transition-colors w-full md:w-auto"
         >
           {uniqueProjectFilters.map(p => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -238,9 +276,10 @@ export default function TasksPage() {
       {/* Task List */}
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-obsidian-dark/50 rounded-2xl border border-obsidian-border/50">
             <ListChecks className="w-12 h-12 text-obsidian-muted/30 mx-auto mb-3" />
-            <p className="text-sm text-obsidian-muted">No tasks found.</p>
+            <p className="text-sm font-bold text-white">No tasks found</p>
+            <p className="text-xs text-obsidian-muted mt-1">Try adjusting your filters or create a new task.</p>
           </div>
         )}
         {filtered.map((task, i) => (
@@ -249,17 +288,17 @@ export default function TasksPage() {
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="glass-card rounded-2xl p-5 border border-obsidian-border flex flex-col md:flex-row gap-4 justify-between"
+            className="glass-card rounded-2xl p-5 border border-obsidian-border flex flex-col lg:flex-row gap-4 justify-between transition-all hover:bg-obsidian-card"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${priorityColors[task.priority]}`}>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${priorityColors[task.priority]}`}>
                   {task.priority}
                 </span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${statusColors[task.status]}`}>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${statusColors[task.status]}`}>
                   {task.status}
                 </span>
-                <h3 className={`text-sm font-bold text-white ml-1 ${task.status === 'Completed' ? 'line-through text-obsidian-muted/60' : ''}`}>
+                <h3 className={`text-sm font-bold text-white ml-1 ${task.status === 'Done' ? 'line-through text-obsidian-muted/60' : ''}`}>
                   {task.title}
                 </h3>
               </div>
@@ -267,13 +306,16 @@ export default function TasksPage() {
               {task.description && (
                 <div className="flex items-start gap-1.5 mb-3 text-xs text-obsidian-muted">
                   <AlignLeft className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <p className="leading-relaxed">{task.description}</p>
+                  <p className="leading-relaxed whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
 
               <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-obsidian-muted">
                 <span className="flex items-center gap-1.5 text-blue-400">
                   <FolderKanban className="w-3.5 h-3.5" /> {task.projectName}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> {task.assignedTo || 'Unassigned'}
                 </span>
                 {task.dueDate && (
                   <span className="flex items-center gap-1.5">
@@ -283,24 +325,24 @@ export default function TasksPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0 md:flex-col md:items-end justify-center border-t border-obsidian-border/50 md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 mt-1 md:mt-0">
-              <div className="flex gap-2 w-full md:w-auto">
-                {task.status !== 'Completed' && (
-                  <button onClick={() => handleStatusChange(task.id, 'Completed')} className="flex-1 md:flex-none px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-status-live/10 text-status-live border border-status-live/20 hover:bg-status-live hover:text-obsidian-dark transition-all flex items-center justify-center gap-1.5">
+            <div className="flex items-center gap-2 flex-shrink-0 lg:flex-col lg:items-end justify-center border-t border-obsidian-border/50 lg:border-t-0 lg:border-l pt-3 lg:pt-0 lg:pl-4 mt-2 lg:mt-0">
+              <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+                {task.status !== 'Working' && task.status !== 'Done' && (
+                  <button onClick={() => handleStatusChange(task.id, 'Working')} className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg text-[10px] font-bold bg-status-dev/10 text-status-dev border border-status-dev/20 hover:bg-status-dev hover:text-obsidian-dark transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <Clock className="w-3 h-3" /> Mark Working
+                  </button>
+                )}
+                {task.status !== 'Review' && task.status !== 'Done' && (
+                  <button onClick={() => handleStatusChange(task.id, 'Review')} className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <AlertCircle className="w-3 h-3" /> Mark Review
+                  </button>
+                )}
+                {task.status !== 'Done' && (
+                  <button onClick={() => handleStatusChange(task.id, 'Done')} className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg text-[10px] font-bold bg-status-live/10 text-status-live border border-status-live/20 hover:bg-status-live hover:text-obsidian-dark transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
                     <CheckCircle className="w-3 h-3" /> Mark Done
                   </button>
                 )}
-                {task.status === 'Pending' && (
-                  <button onClick={() => handleStatusChange(task.id, 'In Progress')} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-status-dev/10 text-status-dev border border-status-dev/20 hover:bg-status-dev hover:text-obsidian-dark transition-all" title="Start Progress">
-                    <Clock className="w-3 h-3" />
-                  </button>
-                )}
-                {task.status !== 'Blocked' && task.status !== 'Completed' && (
-                  <button onClick={() => handleStatusChange(task.id, 'Blocked')} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-status-error/10 text-status-error border border-status-error/20 hover:bg-status-error hover:text-white transition-all" title="Mark Blocked">
-                    <AlertCircle className="w-3 h-3" />
-                  </button>
-                )}
-                <button onClick={() => handleDelete(task.id)} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:bg-status-error/20 hover:text-status-error transition-all" title="Delete">
+                <button onClick={() => handleDelete(task.id)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:bg-status-error/20 hover:text-status-error transition-all" title="Delete">
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>

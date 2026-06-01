@@ -8,7 +8,8 @@ const defaultTasks = [
     projectId: 'billqyro',
     projectName: 'BillQyro',
     priority: 'High',
-    status: 'In Progress',
+    status: 'Working',
+    assignedTo: 'Khairul',
     dueDate: '2026-06-10',
     createdAt: '2026-05-28T10:00:00.000Z',
     updatedAt: '2026-05-28T10:00:00.000Z'
@@ -20,7 +21,8 @@ const defaultTasks = [
     projectId: 'khair-murafiq-empire-os',
     projectName: 'Khair Murafiq Empire OS',
     priority: 'High',
-    status: 'In Progress',
+    status: 'Review',
+    assignedTo: 'Khairul',
     dueDate: '2026-06-05',
     createdAt: '2026-05-30T10:00:00.000Z',
     updatedAt: '2026-05-30T10:00:00.000Z'
@@ -33,6 +35,7 @@ const defaultTasks = [
     projectName: 'BillQyro',
     priority: 'Medium',
     status: 'Pending',
+    assignedTo: 'Khairul',
     dueDate: '2026-06-15',
     createdAt: '2026-05-25T10:00:00.000Z',
     updatedAt: '2026-05-25T10:00:00.000Z'
@@ -45,6 +48,7 @@ const defaultTasks = [
     projectName: 'Embroidery AI Tool',
     priority: 'Medium',
     status: 'Pending',
+    assignedTo: 'AI Agent',
     dueDate: '2026-07-01',
     createdAt: '2026-05-20T10:00:00.000Z',
     updatedAt: '2026-05-20T10:00:00.000Z'
@@ -56,7 +60,8 @@ const defaultTasks = [
     projectId: 'khair-murafiq-empire-os',
     projectName: 'Khair Murafiq Empire OS',
     priority: 'Critical',
-    status: 'Blocked',
+    status: 'Done',
+    assignedTo: 'Khairul',
     dueDate: '2026-06-08',
     createdAt: '2026-05-22T10:00:00.000Z',
     updatedAt: '2026-05-22T10:00:00.000Z'
@@ -74,7 +79,8 @@ const loadTasks = () => {
         description: t.description || '',
         projectName: t.projectName || t.project || 'General / No Project',
         projectId: t.projectId || (t.project ? t.project.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'general'),
-        status: t.status === 'Working' ? 'In Progress' : (t.status === 'Done' ? 'Completed' : (t.status === 'Review' ? 'In Progress' : t.status)),
+        assignedTo: t.assignedTo || 'Unassigned',
+        status: t.status === 'In Progress' ? 'Working' : (t.status === 'Completed' ? 'Done' : (t.status === 'Blocked' ? 'Review' : t.status)),
         priority: t.priority || 'Medium',
         createdAt: t.createdAt || new Date().toISOString(),
         updatedAt: t.updatedAt || new Date().toISOString()
