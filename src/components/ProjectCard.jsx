@@ -16,6 +16,7 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
   
   const projectAlerts = alerts.filter(a => a.projectId === project.id && a.status !== 'Fixed' && a.status !== 'Ignored')
   const hasCritical = projectAlerts.some(a => a.severity === 'Critical')
+  const criticalHighCount = projectAlerts.filter(a => a.severity === 'Critical' || a.severity === 'High').length
 
   const projectTasks = tasks.filter(t => t.projectId === project.id)
   const activeTasks = projectTasks.filter(t => t.status !== 'Completed')
@@ -28,11 +29,16 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-white font-bold text-base truncate">{project.name}</h3>
-            {projectAlerts.length > 0 && (
+            {projectAlerts.length > 0 ? (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
                 hasCritical ? 'text-status-error bg-status-error/10 border-status-error/30 animate-pulse' : 'text-status-warning bg-status-warning/10 border-status-warning/30'
               }`}>
                 {projectAlerts.length} {projectAlerts.length === 1 ? 'Alert' : 'Alerts'}
+                {criticalHighCount > 0 && ` (${criticalHighCount} Critical/High)`}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border text-status-live bg-status-live/10 border-status-live/30">
+                No Alerts
               </span>
             )}
             <div className="relative">
