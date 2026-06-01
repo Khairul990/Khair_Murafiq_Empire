@@ -134,14 +134,34 @@ export const firebaseService = {
         return items.length
       }
       
-      const projectsCount = await migrateCollection(localData.projects, 'control_projects')
-      const tasksCount = await migrateCollection(localData.tasks, 'control_tasks')
-      const alertsCount = await migrateCollection(localData.alerts, 'control_alerts')
+      const normalizeData = (data) => {
+        if (!data) return []
+        if (Array.isArray(data)) return data
+        if (typeof data === 'object') return Object.values(data)
+        return []
+      }
       
-      const reportsData = [...(localData.finance || []), ...(localData.social_posts || [])]
+      const safeProjects = normalizeData(localData.projects)
+      const safeTasks = normalizeData(localData.tasks)
+      const safeAlerts = normalizeData(localData.alerts)
+      const safeFinance = normalizeData(localData.finance)
+      const safeSocial = normalizeData(localData.social_posts)
+      const safeGoals = normalizeData(localData.goals)
+      
+      let safeSettings = []
+      if (localData.settings) {
+        if (Array.isArray(localData.settings)) safeSettings = localData.settings
+        else if (typeof localData.settings === 'object') safeSettings = [localData.settings]
+      }
+
+      const projectsCount = await migrateCollection(safeProjects, 'control_projects')
+      const tasksCount = await migrateCollection(safeTasks, 'control_tasks')
+      const alertsCount = await migrateCollection(safeAlerts, 'control_alerts')
+      
+      const reportsData = [...safeFinance, ...safeSocial]
       const reportsCount = await migrateCollection(reportsData, 'control_reports')
       
-      const settingsData = [...(localData.goals || []), ...(localData.settings ? [localData.settings] : [])]
+      const settingsData = [...safeGoals, ...safeSettings]
       const settingsCount = await migrateCollection(settingsData, 'control_settings')
       
       // Activity Log
