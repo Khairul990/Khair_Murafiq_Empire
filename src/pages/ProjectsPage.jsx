@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Filter, Globe, Plus, X } from 'lucide-react'
+import { Search, Filter, Globe, Plus, X, ChevronDown } from 'lucide-react'
 import ProjectCard from '../components/ProjectCard'
 import defaultProjects from '../data/projects'
 
@@ -30,6 +30,7 @@ export default function ProjectsPage() {
   const [filter, setFilter] = useState('All')
   
   const [showAdd, setShowAdd] = useState(false)
+  const [isStatusOpen, setIsStatusOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [formData, setFormData] = useState({
     name: '', id: '', type: '', status: 'Development',
@@ -148,11 +149,33 @@ export default function ProjectsPage() {
               <label className="text-[11px] text-obsidian-muted font-medium ml-1">Type</label>
               <input value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-gold/30 outline-none transition-colors" placeholder="e.g. Billing SaaS" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
               <label className="text-[11px] text-obsidian-muted font-medium ml-1">Status</label>
-              <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-gold/30 outline-none transition-colors">
-                {filters.filter(f => f !== 'All').map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
+              <div 
+                onClick={() => setIsStatusOpen(!isStatusOpen)}
+                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white hover:border-gold/30 transition-colors flex items-center justify-between cursor-pointer"
+              >
+                <span>{formData.status}</span>
+                <ChevronDown className="w-4 h-4 text-obsidian-muted" />
+              </div>
+              {isStatusOpen && (
+                <div className="absolute z-10 w-full top-full mt-1 bg-obsidian-card border border-obsidian-border rounded-xl shadow-2xl overflow-hidden py-1">
+                  {['Development', 'Live', 'Maintenance', 'Warning', 'Error'].map(opt => (
+                    <div 
+                      key={opt}
+                      onClick={() => {
+                        setFormData({...formData, status: opt})
+                        setIsStatusOpen(false)
+                      }}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
+                        formData.status === opt ? 'bg-gold/10 text-gold' : 'text-obsidian-muted hover:bg-obsidian-light hover:text-white'
+                      }`}
+                    >
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-obsidian-muted font-medium ml-1">Live URL</label>
