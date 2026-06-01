@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   ListChecks, Plus, Trash2, CheckCircle, Clock, AlertCircle,
-  Calendar, FolderKanban, X, AlignLeft, User, Search
+  Calendar, FolderKanban, X, AlignLeft, User, Search, Loader2
 } from 'lucide-react'
-import { loadTasks, saveTasks, getNextId } from '../data/tasks'
-import defaultProjects from '../data/projects'
+import { getNextId } from '../data/tasks'
 import { auth } from '../services/firebaseConfig'
+import { storageAdapter } from '../services/storageAdapter'
 
 const priorityColors = {
   Critical: 'text-status-error bg-status-error/10 border-status-error/20 animate-pulse',
@@ -22,26 +22,11 @@ const statusColors = {
   Done: 'text-status-live bg-status-live/10 border-status-live/30',
 }
 
-const loadAllProjects = () => {
-  try {
-    const stored = localStorage.getItem('km_empire_projects')
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      const merged = [...defaultProjects]
-      parsed.forEach(p => {
-        const idx = merged.findIndex(dp => dp.id === p.id)
-        if (idx !== -1) merged[idx] = p
-        else merged.push(p)
-      })
-      return merged
-    }
-  } catch {}
-  return [...defaultProjects]
-}
-
 export default function TasksPage() {
   const [tasks, setTasks] = useState([])
   const [allProjects, setAllProjects] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   
   const [filter, setFilter] = useState('All')
   const [projectFilter, setProjectFilter] = useState('All')
@@ -53,8 +38,21 @@ export default function TasksPage() {
   })
 
   useEffect(() => {
-    setTasks(loadTasks())
-    setAllProjects(loadAllProjects())
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [p, t] = await Promise.all([
+          storageAdapter.getProjects(),
+          storageAdapter.getTasks()
+        ])
+        setAllProjects(p)
+        setTasks(t)
+      } catch (err) {
+        setErrorMsg('Firebase unavailable. Showing local backup data.')
+      }
+      setIsLoading(false)
+    }
+    fetchData()
   }, [])
 
   const filtered = tasks.filter(t => {
@@ -65,7 +63,7 @@ export default function TasksPage() {
     return matchStatus && matchProject && matchSearch
   })
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault()
     if (!newTask.title.trim()) return
 
@@ -73,28 +71,32 @@ export default function TasksPage() {
     const pName = selProject ? selProject.name : 'General / No Project'
     const pId = selProject ? selProject.id : 'general'
 
-    const updated = [{ 
+    const newTaskObj = { 
       ...newTask, 
       projectId: pId,
       projectName: pName,
       id: getNextId(tasks).toString(), 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    }, ...tasks]
+    }
+    
+    const updated = [newTaskObj, ...tasks]
     
     setTasks(updated)
-    saveTasks(updated)
     setNewTask({ title: '', description: '', projectId: '', assignedTo: 'Khairul', priority: 'Medium', status: 'Pending', dueDate: '' })
     setShowAdd(false)
+    
+    await storageAdapter.saveTask(newTaskObj, updated)
   }
 
-  const handleStatusChange = (id, status) => {
-    const updated = tasks.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t)
+  const handleStatusChange = async (id, status) => {
+    const updatedTask = { ...tasks.find(t => t.id === id), status, updatedAt: new Date().toISOString() }
+    const updated = tasks.map(t => t.id === id ? updatedTask : t)
     setTasks(updated)
-    saveTasks(updated)
+    await storageAdapter.saveTask(updatedTask, updated)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
@@ -102,7 +104,7 @@ export default function TasksPage() {
     if (window.confirm("Are you sure you want to delete this task?")) {
       const updated = tasks.filter(t => t.id !== id)
       setTasks(updated)
-      saveTasks(updated)
+      await storageAdapter.deleteTask(id, updated)
     }
   }
 
@@ -122,12 +124,14 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl lg:text-2xl font-extrabold text-white">
+          <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
             Empire <span className="gold-gradient-text">Task Manager</span>
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gold" />}
           </h1>
           <p className="text-xs text-obsidian-muted mt-1">
-            {tasks.filter(t => t.status !== 'Done').length} active tasks · {tasks.filter(t => t.status === 'Done').length} completed
+            {isLoading ? 'Loading from Firebase...' : `${tasks.filter(t => t.status !== 'Done').length} active tasks · ${tasks.filter(t => t.status === 'Done').length} completed`}
           </p>
+          {errorMsg && <p className="text-[10px] text-status-error mt-1">{errorMsg}</p>}
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}

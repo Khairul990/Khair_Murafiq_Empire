@@ -10,7 +10,7 @@
  */
 
 import { db, auth } from './firebaseConfig'
-import { doc, setDoc, getDoc, collection, writeBatch, getDocs } from 'firebase/firestore'
+import { doc, setDoc, getDoc, collection, writeBatch, getDocs, deleteDoc } from 'firebase/firestore'
 
 // Helper to inject standard fields
 const withStandardFields = (data) => ({
@@ -21,50 +21,54 @@ const withStandardFields = (data) => ({
   updatedAt: new Date().toISOString()
 })
 
+const getCollectionData = async (colName) => {
+  if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
+    throw new Error("Access Denied: Owner only")
+  }
+  const snapshot = await getDocs(collection(db, colName))
+  const data = []
+  snapshot.forEach(d => {
+    const docData = d.data()
+    data.push({ ...docData, id: docData.id || d.id }) // Ensure id exists
+  })
+  return data.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+}
+
 export const firebaseService = {
   // PROJECTS
-  getProjects: async () => {
-    const data = localStorage.getItem('km_empire_projects')
-    return data ? JSON.parse(data) : []
-  },
+  getProjects: async () => await getCollectionData('control_projects'),
   saveProject: async (project) => {
-    // In future: await setDoc(doc(db, "control_projects", project.id), withStandardFields(project))
-    console.log("Mock Firebase: Saved Project", project.id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await setDoc(doc(db, "control_projects", String(project.id)), withStandardFields(project))
     return project
   },
   deleteProject: async (id) => {
-    // In future: await deleteDoc(doc(db, "control_projects", id))
-    console.log("Mock Firebase: Deleted Project", id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await deleteDoc(doc(db, "control_projects", String(id)))
   },
 
   // TASKS
-  getTasks: async () => {
-    const data = localStorage.getItem('km_empire_tasks')
-    return data ? JSON.parse(data) : []
-  },
+  getTasks: async () => await getCollectionData('control_tasks'),
   saveTask: async (task) => {
-    // In future: await setDoc(doc(db, "control_tasks", task.id), withStandardFields(task))
-    console.log("Mock Firebase: Saved Task", task.id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await setDoc(doc(db, "control_tasks", String(task.id)), withStandardFields(task))
     return task
   },
   deleteTask: async (id) => {
-    // In future: await deleteDoc(doc(db, "control_tasks", id))
-    console.log("Mock Firebase: Deleted Task", id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await deleteDoc(doc(db, "control_tasks", String(id)))
   },
 
   // ALERTS
-  getAlerts: async () => {
-    const data = localStorage.getItem('km_empire_alerts')
-    return data ? JSON.parse(data) : []
-  },
+  getAlerts: async () => await getCollectionData('control_alerts'),
   saveAlert: async (alert) => {
-    // In future: await setDoc(doc(db, "control_alerts", alert.id), withStandardFields(alert))
-    console.log("Mock Firebase: Saved Alert", alert.id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await setDoc(doc(db, "control_alerts", String(alert.id)), withStandardFields(alert))
     return alert
   },
   deleteAlert: async (id) => {
-    // In future: await deleteDoc(doc(db, "control_alerts", id))
-    console.log("Mock Firebase: Deleted Alert", id)
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await deleteDoc(doc(db, "control_alerts", String(id)))
   },
 
   // CONNECTION TEST

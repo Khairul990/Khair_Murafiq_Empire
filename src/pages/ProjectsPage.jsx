@@ -1,44 +1,17 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Filter, Globe, Plus, X, ChevronDown } from 'lucide-react'
+import { Search, Filter, Globe, Plus, X, ChevronDown, Loader2 } from 'lucide-react'
 import ProjectCard from '../components/ProjectCard'
-import defaultProjects from '../data/projects'
-import { loadTasks } from '../data/tasks'
 import { auth } from '../services/firebaseConfig'
-
-const PROJECTS_KEY = 'km_empire_projects'
-const ALERTS_KEY = 'km_empire_alerts'
-
-const loadAlerts = () => {
-  try {
-    const stored = localStorage.getItem(ALERTS_KEY)
-    if (stored) return JSON.parse(stored)
-  } catch {}
-  return []
-}
-
-const loadProjects = () => {
-  try {
-    const stored = localStorage.getItem(PROJECTS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      const merged = [...defaultProjects]
-      
-      parsed.forEach(p => {
-        const idx = merged.findIndex(dp => dp.id === p.id)
-        if (idx !== -1) merged[idx] = p
-        else merged.push(p)
-      })
-      return merged
-    }
-  } catch {}
-  return [...defaultProjects]
-}
+import { storageAdapter } from '../services/storageAdapter'
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState(loadProjects)
-  const [alerts, setAlerts] = useState(loadAlerts)
-  const [tasks] = useState(loadTasks)
+  const [projects, setProjects] = useState([])
+  const [alerts, setAlerts] = useState([])
+  const [tasks, setTasks] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
+  
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
   
@@ -56,14 +29,26 @@ export default function ProjectsPage() {
   })
 
   useEffect(() => {
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
-  }, [projects])
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [p, a, t] = await Promise.all([
+          storageAdapter.getProjects(),
+          storageAdapter.getAlerts(),
+          storageAdapter.getTasks()
+        ])
+        setProjects(p)
+        setAlerts(a)
+        setTasks(t)
+      } catch (err) {
+        setErrorMsg('Firebase unavailable. Showing local backup data.')
+      }
+      setIsLoading(false)
+    }
+    fetchData()
+  }, [])
 
-  useEffect(() => {
-    localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts))
-  }, [alerts])
-
-  const handleAddAlertSave = (e) => {
+  const handleAddAlertSave = async (e) => {
     e.preventDefault()
     if (!alertProject) return
 
@@ -77,14 +62,17 @@ export default function ProjectsPage() {
       updatedAt: new Date().toISOString()
     }
 
-    setAlerts([newAlert, ...alerts])
+    const newAlerts = [newAlert, ...alerts]
+    setAlerts(newAlerts)
     setAlertProject(null)
     setAlertFormData({ alertType: 'Website Down', severity: 'High', message: '' })
+    
+    await storageAdapter.saveAlert(newAlert, newAlerts)
   }
 
   const filters = ['All', 'Live', 'Development', 'Maintenance', 'Warning', 'Error', 'Paused', 'Planning', 'Building']
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
     
     let newId = formData.id.trim()
@@ -96,16 +84,16 @@ export default function ProjectsPage() {
       lastChecked: 'Just now'
     }
 
-    if (editingId) {
-      setProjects(projects.map(p => p.id === editingId ? projectToSave : p))
-    } else {
-      // Add to front so it shows first
-      setProjects([projectToSave, ...projects])
-    }
+    const newProjects = editingId
+      ? projects.map(p => p.id === editingId ? projectToSave : p)
+      : [projectToSave, ...projects]
 
+    setProjects(newProjects)
     setShowAdd(false)
     setEditingId(null)
     setFormData({ name: '', id: '', type: '', status: 'Development', liveUrl: '', adminUrl: '', githubUrl: '', vercelUrl: '', firebaseRoot: '', notes: '' })
+    
+    await storageAdapter.saveProject(projectToSave, newProjects)
   }
 
   const handleEdit = (project) => {
@@ -129,13 +117,15 @@ export default function ProjectsPage() {
     setShowAdd(true)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }
     if (window.confirm('Are you sure you want to delete this website? This action cannot be undone.')) {
-      setProjects(projects.filter(p => p.id !== id))
+      const newProjects = projects.filter(p => p.id !== id)
+      setProjects(newProjects)
+      await storageAdapter.deleteProject(id, newProjects)
     }
   }
 
@@ -156,12 +146,14 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl lg:text-2xl font-extrabold text-white">
+          <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
             Website <span className="gold-gradient-text">Control Room</span>
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gold" />}
           </h1>
           <p className="text-xs text-obsidian-muted mt-1">
-            Manage all {projects.length} empire projects from one place
+            {isLoading ? 'Loading from Firebase...' : `Manage all ${projects.length} empire projects from one place`}
           </p>
+          {errorMsg && <p className="text-[10px] text-status-error mt-1">{errorMsg}</p>}
         </div>
         <button
           onClick={() => {

@@ -1,45 +1,18 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Activity, Shield, Link as LinkIcon, Gauge, RefreshCw,
-  CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X
+  CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X, Loader2
 } from 'lucide-react'
 import monitoring from '../data/monitoring'
-import defaultProjects from '../data/projects'
 import { auth } from '../services/firebaseConfig'
-
-const ALERTS_KEY = 'km_empire_alerts'
-const PROJECTS_KEY = 'km_empire_projects'
-
-const loadAlerts = () => {
-  try {
-    const stored = localStorage.getItem(ALERTS_KEY)
-    if (stored) return JSON.parse(stored)
-  } catch {}
-  return []
-}
-
-const loadProjects = () => {
-  try {
-    const stored = localStorage.getItem(PROJECTS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      const merged = [...defaultProjects]
-      parsed.forEach(p => {
-        const idx = merged.findIndex(dp => dp.id === p.id)
-        if (idx !== -1) merged[idx] = p
-        else merged.push(p)
-      })
-      return merged
-    }
-  } catch {}
-  return [...defaultProjects]
-}
+import { storageAdapter } from '../services/storageAdapter'
 
 export default function MonitoringPage() {
   const [scanning, setScanning] = useState(false)
-  const [alerts, setAlerts] = useState(loadAlerts)
-  const [projects] = useState(loadProjects)
+  const [alerts, setAlerts] = useState([])
+  const [projects, setProjects] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -47,20 +20,39 @@ export default function MonitoringPage() {
   })
 
   useEffect(() => {
-    localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts))
-  }, [alerts])
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [a, p] = await Promise.all([
+          storageAdapter.getAlerts(),
+          storageAdapter.getProjects()
+        ])
+        setAlerts(a)
+        setProjects(p)
+      } catch (err) {
+        setErrorMsg('Firebase unavailable. Showing local backup data.')
+      }
+      setIsLoading(false)
+    }
+    fetchData()
+  }, [])
 
-  const handleUpdateStatus = (id, newStatus) => {
-    setAlerts(alerts.map(a => a.id === id ? { ...a, status: newStatus, updatedAt: new Date().toISOString() } : a))
+  const handleUpdateStatus = async (id, newStatus) => {
+    const updatedAlert = { ...alerts.find(a => a.id === id), status: newStatus, updatedAt: new Date().toISOString() }
+    const updatedAlerts = alerts.map(a => a.id === id ? updatedAlert : a)
+    setAlerts(updatedAlerts)
+    await storageAdapter.saveAlert(updatedAlert, updatedAlerts)
   }
 
-  const handleDeleteAlert = (id) => {
+  const handleDeleteAlert = async (id) => {
     if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
       alert("Access Denied: Owner login required for this dangerous action.")
       return
     }
     if (window.confirm("Are you sure you want to delete this alert?")) {
-      setAlerts(alerts.filter(a => a.id !== id))
+      const updatedAlerts = alerts.filter(a => a.id !== id)
+      setAlerts(updatedAlerts)
+      await storageAdapter.deleteAlert(id, updatedAlerts)
     }
   }
 
@@ -69,7 +61,7 @@ export default function MonitoringPage() {
     setTimeout(() => setScanning(false), 2000)
   }
 
-  const handleSaveAlert = (e) => {
+  const handleSaveAlert = async (e) => {
     e.preventDefault()
     if (!formData.projectId) {
       alert('Please select a website')
@@ -90,9 +82,12 @@ export default function MonitoringPage() {
       updatedAt: new Date().toISOString()
     }
 
-    setAlerts([newAlert, ...alerts])
+    const newAlerts = [newAlert, ...alerts]
+    setAlerts(newAlerts)
     setShowAddForm(false)
     setFormData({ projectId: '', alertType: 'Website Down', severity: 'High', message: '', status: 'New' })
+    
+    await storageAdapter.saveAlert(newAlert, newAlerts)
   }
 
   return (
@@ -104,12 +99,14 @@ export default function MonitoringPage() {
     >
       {/* Header */}
       <div>
-        <h1 className="text-xl lg:text-2xl font-extrabold text-white">
+        <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
           Alert Center & <span className="gold-gradient-text">Monitoring</span>
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gold" />}
         </h1>
         <p className="text-xs text-obsidian-muted mt-1">
-          Real-time website monitoring and alert management
+          {isLoading ? 'Loading from Firebase...' : 'Real-time website monitoring and alert management'}
         </p>
+        {errorMsg && <p className="text-[10px] text-status-error mt-1">{errorMsg}</p>}
       </div>
 
       {/* Status Grid */}
