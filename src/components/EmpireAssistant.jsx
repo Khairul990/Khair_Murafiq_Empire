@@ -365,18 +365,18 @@ export default function EmpireAssistant({ open, onToggle }) {
   return (
     <>
       {/* Floating Button */}
-      <button
-        onClick={onToggle}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-gold-lg ${
-          open ? 'bg-obsidian-card border border-gold/30 rotate-45' : 'gold-gradient hover:shadow-gold-lg'
-        }`}
-      >
-        {open ? <X className="w-6 h-6 text-gold" /> : <Bot className="w-6 h-6 text-obsidian-dark" />}
-      </button>
+      {!open && (
+        <button
+          onClick={onToggle}
+          className="fixed bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-gold-lg gold-gradient hover:shadow-gold-lg"
+        >
+          <Bot className="w-6 h-6 text-obsidian-dark" />
+        </button>
+      )}
 
       {/* Assistant Panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
+        <div className="fixed bottom-[90px] md:bottom-[110px] right-3 md:right-6 z-50 w-[calc(100vw-24px)] md:w-[360px] h-[500px] max-h-[70vh] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gold/10 bg-obsidian-dark/50 rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -415,7 +415,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
           {/* Voice Monitor Settings */}
           {showMonitorSettings && (
-            <div className="shrink-0 px-4 py-3 bg-obsidian-dark/80 border-b border-gold/5 text-xs text-obsidian-muted space-y-3">
+            <div className="shrink-0 px-4 py-3 bg-obsidian-dark/80 border-b border-gold/5 text-xs text-obsidian-muted space-y-3 overflow-y-auto max-h-40 empire-scrollbar">
               <div className="flex items-center justify-between">
                 <span className="text-white font-semibold">Proactive Voice Monitor</span>
                 <button 
@@ -549,7 +549,7 @@ export default function EmpireAssistant({ open, onToggle }) {
           )}
 
           {/* Input */}
-          <div className="shrink-0 p-4 border-t border-gold/10 bg-obsidian-dark/50 rounded-b-2xl pb-5">
+          <div className="shrink-0 p-4 border-t border-gold/10 bg-obsidian-dark/50 rounded-b-2xl pb-4">
             <div className="flex gap-2">
               <input
                 value={input}
