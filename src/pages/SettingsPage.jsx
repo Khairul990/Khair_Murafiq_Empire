@@ -14,13 +14,14 @@ export default function SettingsPage() {
   const [isTesting, setIsTesting] = useState(false)
 
   const [previewData, setPreviewData] = useState(null)
+  const [migrationPreview, setMigrationPreview] = useState(null)
   const fileInputRef = useRef(null)
 
   const exportData = (keysToExport, filename) => {
     const data = {
-      exportedAt: new Date().toISOString(),
+      exportDate: new Date().toISOString(),
       appName: 'Khair Murafiq Empire OS',
-      version: '1.0.0'
+      backupVersion: 1
     }
     
     keysToExport.forEach(key => {
@@ -47,7 +48,7 @@ export default function SettingsPage() {
     exportData([
       'km_empire_projects', 'km_empire_alerts', 'km_empire_tasks', 
       'km_empire_finance', 'km_empire_goals', 'km_empire_social_posts', 'km_empire_settings'
-    ], `empire_os_full_backup_${new Date().toISOString().split('T')[0]}.json`)
+    ], `km-empire-backup-${new Date().toISOString().split('T')[0]}.json`)
   }
 
   const handleExportSpecific = (type, key) => {
@@ -111,6 +112,24 @@ export default function SettingsPage() {
     setIsTesting(false)
   }
 
+  const handlePreviewMigration = () => {
+    const getCount = (key) => {
+      try {
+        const val = localStorage.getItem(key)
+        return val ? JSON.parse(val).length : 0
+      } catch { return 0 }
+    }
+    
+    setMigrationPreview({
+      projects: getCount('km_empire_projects'),
+      tasks: getCount('km_empire_tasks'),
+      alerts: getCount('km_empire_alerts'),
+      finance: getCount('km_empire_finance'),
+      social: getCount('km_empire_social_posts'),
+      goals: getCount('km_empire_goals')
+    })
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -172,6 +191,59 @@ export default function SettingsPage() {
               </button>
               <button onClick={() => setPreviewData(null)} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Migration Preview Modal Overlay */}
+      {migrationPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-dark/90 backdrop-blur-sm">
+          <div className="bg-obsidian-card border border-blue-500/50 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Server className="w-6 h-6 text-blue-400" />
+              <h2 className="text-lg font-bold text-white">Migration Preview</h2>
+            </div>
+            <p className="text-sm text-obsidian-muted mb-4">
+              This preview shows the local data that will be moved to Firestore collections.
+            </p>
+            
+            <div className="space-y-2 mb-6">
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">control_projects</span>
+                <span className="font-bold text-white">{migrationPreview.projects} items</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">control_tasks</span>
+                <span className="font-bold text-white">{migrationPreview.tasks} items</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">control_alerts</span>
+                <span className="font-bold text-white">{migrationPreview.alerts} items</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">control_reports (finance/social)</span>
+                <span className="font-bold text-white">{migrationPreview.finance + migrationPreview.social} items</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">control_settings (goals/config)</span>
+                <span className="font-bold text-white">{migrationPreview.goals + 1} items</span>
+              </div>
+            </div>
+
+            <div className="bg-status-warning/10 border border-status-warning/30 rounded-xl p-3 flex gap-2 items-start mb-6">
+              <AlertTriangle className="w-4 h-4 text-status-warning flex-shrink-0" />
+              <p className="text-[10px] text-status-warning font-bold leading-tight">
+                Backup required before migration. Migration will not start until owner confirms.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button disabled className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-500/20 border border-blue-500/50 opacity-50 cursor-not-allowed">
+                Migration Locked
+              </button>
+              <button onClick={() => setMigrationPreview(null)} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
+                Close Preview
               </button>
             </div>
           </div>
@@ -253,36 +325,28 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firebase SDK</span>
-                <span className="font-bold text-status-live">Installed</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Firebase Config</span>
-                <span className="font-bold text-status-warning">Environment variables required</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Owner Login</span>
-                <span className="font-bold text-status-live">Firebase Auth Active</span>
+                <span className="font-bold text-status-live">Ready</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Firebase Auth</span>
                 <span className="font-bold text-status-live">Active</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firestore Rules</span>
+                <span className="font-bold text-status-live">Published / Tested</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Database Protection</span>
+                <span className="font-bold text-status-live">Owner-only Active</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Storage Mode</span>
                 <span className="font-bold text-status-dev">Local</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firestore Rules</span>
-                <span className="font-bold text-blue-400">Draft Ready / Not Deployed</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Migration</span>
-                <span className="font-bold text-status-error">Blocked Until Rules Deploy</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Demo Password</span>
-                <span className="font-bold text-obsidian-muted">Removed</span>
+                <span className="font-bold text-status-warning">Backup Required Before Migration</span>
               </div>
             </div>
 
@@ -299,7 +363,7 @@ export default function SettingsPage() {
               <div className="bg-status-error/10 border border-status-error/30 rounded-xl p-3 flex gap-2 items-start mt-4">
                 <AlertTriangle className="w-5 h-5 text-status-error flex-shrink-0" />
                 <p className="text-[10px] text-status-error font-bold leading-tight">
-                  CRITICAL: Do not migrate real dashboard data to Firestore until Firebase Authentication and Firestore Security Rules are active.
+                  CRITICAL: Do not migrate dashboard data until Firestore Rules are published and tested.
                 </p>
               </div>
 
@@ -350,9 +414,24 @@ export default function SettingsPage() {
                   </p>
                 )}
 
-                <p className="text-[10px] text-obsidian-muted/80">
+                <p className="text-[10px] text-obsidian-muted/80 mb-4">
                   Firebase test only. Your dashboard data is still stored locally.
                 </p>
+
+                <div className="space-y-3 pt-3 border-t border-obsidian-border">
+                  <button 
+                    onClick={handlePreviewMigration}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-obsidian-card text-white border border-obsidian-border hover:border-blue-400 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Database className="w-4 h-4" /> Preview Firebase Migration
+                  </button>
+                  <button 
+                    disabled
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-status-error/10 text-status-error border border-status-error/30 opacity-75 cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    Migration Locked — Backup Required
+                  </button>
+                </div>
               </div>
             </div>
           </div>

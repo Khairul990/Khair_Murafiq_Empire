@@ -1,18 +1,17 @@
 rules_version = '2';
 
-// Khair Murafiq Empire OS - Security Rules Draft
+// Khair Murafiq Empire OS - Security Rules Final Draft
 // Owner Email: khairul2052007@gmail.com
 // 
 // IMPORTANT SECURITY NOTES:
-// 1. Real protection requires Firebase Authentication to be fully implemented.
-// 2. Only the authenticated owner should be able to read/write control room data.
-// 3. Public users must NOT access control_projects, control_tasks, control_alerts, control_settings, control_activity_logs, control_reports.
-// 4. The current demo local login is entirely client-side and is NOT enough for real Firestore protection.
+// 1. These rules enforce strict Owner-Only access to all control room collections.
+// 2. Any user attempting to read or write to the database who is not authenticated,
+//    or whose email is not exactly khairul2052007@gmail.com, will be explicitly DENIED.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Function to check if the user is logged in and is the owner
+    // Helper function to cryptographically verify the Owner
     function isOwner() {
       return request.auth != null && request.auth.token.email == 'khairul2052007@gmail.com';
     }
@@ -47,10 +46,14 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
-    // Connection Tests Collection (Temporary access for testing during migration)
-    // NOTE: This should eventually be locked down with isOwner() as well.
+    // Connection Tests Collection
     match /control_connection_tests/{docId} {
-      allow read, write: if true; // Temporarily open for connection tests before Auth is ready
+      allow read, write: if isOwner();
+    }
+    
+    // Default Deny Rule (Fallback)
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
