@@ -16,6 +16,7 @@ const pageTitles = {
   '/reports': 'Reports Center',
   '/safety': 'Safety Rules',
   '/api-engine': 'API Control Engine',
+  '/assistant-settings': 'Assistant Settings',
   '/settings': 'Settings',
 }
 

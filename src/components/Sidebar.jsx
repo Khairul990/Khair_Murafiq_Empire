@@ -20,6 +20,7 @@ const navItems = [
   { to: '/reports', icon: FileText, label: 'Reports Center' },
   { to: '/api-engine', icon: Server, label: 'API Control Engine' },
   { to: '/safety', icon: ShieldAlert, label: 'Safety Rules' },
+  { to: '/assistant-settings', icon: Bot, label: 'Assistant Settings' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

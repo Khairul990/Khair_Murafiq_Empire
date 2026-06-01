@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bot, X, Send, Sparkles, Mic, FileText, Command } from 'lucide-react'
+import { Bot, X, Send, Sparkles, Mic, FileText, Command, Settings2 } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 import { getAssistantResponse } from '../data/assistantData'
 import { addAuditLog } from '../utils/auditLogger'
@@ -12,16 +12,31 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [lang, setLang] = useState('bn') // default to Bengali
   const [isTyping, setIsTyping] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [voiceStateMsg, setVoiceStateMsg] = useState('')
   const [systemRisk, setSystemRisk] = useState('Safe')
 
+  const [settings, setSettings] = useState({
+    voiceOutput: true,
+    autoVoiceBriefing: false,
+    quietMode: false,
+    checkInterval: 300000,
+    alertVoice: true,
+    taskReminderVoice: true,
+    healthWarningVoice: true,
+  })
+
   const [monitorActive, setMonitorActive] = useState(false)
-  const [checkInterval, setCheckInterval] = useState(300000) // 5 min
-  const [quietMode, setQuietMode] = useState(false)
   const [lastCheckedTime, setLastCheckedTime] = useState('Never')
   const [lastVoiceAlertTime, setLastVoiceAlertTime] = useState('None')
   const [firebaseError, setFirebaseError] = useState(false)
-  const [showMonitorSettings, setShowMonitorSettings] = useState(false)
+
+  const loadSettings = () => {
+    try {
+      const stored = localStorage.getItem('km_empire_assistant_settings')
+      if (stored) {
+        setSettings(prev => ({ ...prev, ...JSON.parse(stored) }))
+      }
+    } catch (err) {}
+  }
 
   const messagesEndRef = useRef(null)
 
@@ -49,6 +64,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       window.speechSynthesis.getVoices()
     }
     loadRisk()
+    loadSettings()
 
     const handleLockdownConfirmed = () => {
       setMonitorActive(false)
@@ -56,10 +72,16 @@ export default function EmpireAssistant({ open, onToggle }) {
         onToggle()
       }
     }
+    const handleSettingsUpdated = () => {
+      loadSettings()
+    }
+
     window.addEventListener('lockdown_confirmed', handleLockdownConfirmed)
+    window.addEventListener('assistant_settings_updated', handleSettingsUpdated)
 
     return () => {
       window.removeEventListener('lockdown_confirmed', handleLockdownConfirmed)
+      window.removeEventListener('assistant_settings_updated', handleSettingsUpdated)
     }
   }, [open, onToggle])
 
@@ -103,7 +125,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       let msgWebsite = ''
       
       for (const a of criticalOrHighAlerts) {
-        if (!spokenData[`alert_${a.id}`]) {
+        if (settings.alertVoice && !spokenData[`alert_${a.id}`]) {
           shouldSpeak = true
           spokenData[`alert_${a.id}`] = true
           msgWebsite = a.projectName || ''
@@ -113,7 +135,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       if (!shouldSpeak) {
         for (const p of errorProjects) {
-          if (!spokenData[`proj_${p.id}`]) {
+          if (settings.healthWarningVoice && !spokenData[`proj_${p.id}`]) {
             shouldSpeak = true
             spokenData[`proj_${p.id}`] = true
             msgWebsite = p.name || ''
@@ -124,7 +146,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       if (!shouldSpeak) {
         for (const t of pendingCriticalTasks) {
-          if (!spokenData[`task_${t.id}`]) {
+          if (settings.taskReminderVoice && !spokenData[`task_${t.id}`]) {
             shouldSpeak = true
             spokenData[`task_${t.id}`] = true
             break
@@ -164,13 +186,13 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   useEffect(() => {
     let intervalId
-    if (monitorActive && !quietMode) {
-      intervalId = setInterval(runProactiveCheck, checkInterval)
+    if (monitorActive && !settings.quietMode) {
+      intervalId = setInterval(runProactiveCheck, settings.checkInterval)
     }
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [monitorActive, checkInterval, quietMode])
+  }, [monitorActive, settings.checkInterval, settings.quietMode])
 
   useEffect(() => {
     const handleKeyDownGlobally = (e) => {
@@ -354,6 +376,11 @@ export default function EmpireAssistant({ open, onToggle }) {
   }
 
   const handleVoice = () => {
+    if (!settings.voiceOutput) {
+      setVoiceStateMsg('Voice output is disabled in settings')
+      setTimeout(() => setVoiceStateMsg(''), 3000)
+      return
+    }
     if (!window.speechSynthesis) {
       setVoiceStateMsg('Voice not supported on this browser')
       return
@@ -448,8 +475,24 @@ export default function EmpireAssistant({ open, onToggle }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href="/assistant-settings"
+                className="px-2 py-1 text-[10px] font-bold rounded-md bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:bg-obsidian-card transition-colors flex items-center gap-1"
+              >
+                <Settings2 className="w-3 h-3" />
+                Settings
+              </a>
               <button
-                onClick={() => setShowMonitorSettings(!showMonitorSettings)}
+                onClick={() => {
+                  const newStatus = !monitorActive
+                  setMonitorActive(newStatus)
+                  if (newStatus) {
+                    addAuditLog('proactive_monitor_enabled', 'success', 'owner_manual', 'Voice monitor turned ON')
+                    runProactiveCheck()
+                  } else {
+                    addAuditLog('proactive_monitor_disabled', 'success', 'owner_manual', 'Voice monitor turned OFF')
+                  }
+                }}
                 className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${
                   monitorActive ? 'bg-status-live/10 text-status-live border border-status-live/20' : 'bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:bg-obsidian-card'
                 }`}
@@ -461,88 +504,6 @@ export default function EmpireAssistant({ open, onToggle }) {
               </button>
             </div>
           </div>
-
-          {/* Voice Monitor Settings */}
-          {showMonitorSettings && (
-            <div className="shrink-0 px-4 py-3 bg-obsidian-dark/80 border-b border-gold/5 text-xs text-obsidian-muted space-y-3 overflow-y-auto max-h-40 empire-scrollbar">
-              <div className="flex items-center justify-between">
-                <span className="text-white font-semibold">Proactive Voice Monitor</span>
-                <button 
-                  onClick={() => {
-                    const newStatus = !monitorActive
-                    setMonitorActive(newStatus)
-                    if (newStatus) {
-                      addAuditLog('proactive_monitor_enabled', 'success', 'owner_manual', 'Voice monitor turned ON')
-                      runProactiveCheck()
-                    } else {
-                      addAuditLog('proactive_monitor_disabled', 'success', 'owner_manual', 'Voice monitor turned OFF')
-                    }
-                  }}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${monitorActive ? 'bg-status-live text-obsidian-dark' : 'bg-obsidian-card text-white border border-obsidian-border hover:opacity-80'}`}
-                >
-                  {monitorActive ? 'ON' : 'OFF'}
-                </button>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span>Check Interval:</span>
-                <select 
-                  value={checkInterval}
-                  onChange={(e) => setCheckInterval(Number(e.target.value))}
-                  className="bg-obsidian-card border border-obsidian-border rounded px-2 py-1 outline-none text-white"
-                >
-                  <option value={300000}>5 min</option>
-                  <option value={600000}>10 min</option>
-                  <option value={1800000}>30 min</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span>Quiet Mode (Mute):</span>
-                <button 
-                  onClick={() => setQuietMode(!quietMode)}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${quietMode ? 'bg-status-warning text-obsidian-dark' : 'bg-obsidian-card text-white border border-obsidian-border hover:opacity-80'}`}
-                >
-                  {quietMode ? 'ON' : 'OFF'}
-                </button>
-              </div>
-              {quietMode && <p className="text-[10px] text-status-warning leading-tight">Quiet Mode চালু আছে, তাই voice বাজবে না.</p>}
-
-              <div className="bg-obsidian-card/50 p-2 rounded-lg border border-obsidian-border text-[10px] space-y-1">
-                <p>Status: <span className="text-white font-bold">{monitorActive ? (quietMode ? 'Monitoring but Quiet' : 'Active (Checking...)') : 'Off'}</span></p>
-                <p>Last checked: {lastCheckedTime}</p>
-                <p>Last voice alert: {lastVoiceAlertTime}</p>
-                {firebaseError && <p className="text-status-error font-bold mt-1">Firebase unavailable / local fallback active.</p>}
-                <p className="text-gold/70 mt-1 italic">Voice notification works only while this Control Room tab is open and browser allows audio.</p>
-              </div>
-
-              {/* Keyboard Commander Help */}
-              <div className="pt-2 border-t border-obsidian-border">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Command className="w-3.5 h-3.5 text-gold" />
-                  <span className="text-white font-semibold">Keyboard Commander</span>
-                </div>
-                <div className="grid grid-cols-1 gap-1 text-[9px] text-obsidian-muted font-mono">
-                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
-                    <span>Quick Report</span>
-                    <span className="text-gold-light">Ctrl+Shift+R</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
-                    <span>Security Check</span>
-                    <span className="text-gold-light">Ctrl+Shift+S</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-obsidian-dark/50 px-2 py-1 rounded border border-obsidian-border/50">
-                    <span>Next Action</span>
-                    <span className="text-gold-light">Ctrl+Shift+N</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-status-error/10 text-status-error px-2 py-1 rounded border border-status-error/20">
-                    <span>Lockdown</span>
-                    <span className="font-bold">Ctrl+Shift+L</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden">
