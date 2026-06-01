@@ -116,9 +116,16 @@ export const firebaseService = {
 
       const migrateCollection = async (items, collectionName) => {
         if (!items || !items.length) return 0
-        for (const item of items) {
-          const docId = String(item.id || item.timestamp || Date.now() + Math.random().toString(36).substring(7))
-          const docRef = doc(db, collectionName, docId)
+        let successCount = 0
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          
+          // Filter out invalid items
+          if (!item || typeof item !== 'object') continue
+
+          const safeId = String(item.id || item.taskId || item.projectId || item.timestamp || `${collectionName}_${i}_${Date.now()}_${Math.random().toString(36).substring(7)}`)
+          const docRef = doc(db, collectionName, safeId)
+          
           batch.set(docRef, {
             ...item,
             ownerEmail: email,
@@ -126,12 +133,14 @@ export const firebaseService = {
             updatedAt: item.updatedAt || migratedAt,
             source: "local_migration",
             migratedAt: migratedAt,
-            originalLocalId: item.id || null
+            originalLocalId: item.id || item.taskId || item.projectId || null
           })
+          
+          successCount++
           operationCount++
           await commitBatchIfNeeded()
         }
-        return items.length
+        return successCount
       }
       
       const normalizeData = (data) => {
