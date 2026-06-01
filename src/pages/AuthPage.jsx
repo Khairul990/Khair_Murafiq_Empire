@@ -17,19 +17,35 @@ export default function AuthPage() {
     setLoading(true)
 
     try {
-      if (email.toLowerCase() !== OWNER_EMAIL) {
+      if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+        throw new Error('Firebase config is missing! Check environment variables.')
+      }
+
+      const formattedEmail = email.trim().toLowerCase()
+      if (formattedEmail !== OWNER_EMAIL) {
         throw new Error('Access denied. Owner only.')
       }
 
-      await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(auth, formattedEmail, password)
       // On success, App.jsx's onAuthStateChanged will redirect
     } catch (err) {
+      let errorMessage = 'Invalid credentials. Access denied.'
+
       if (err.message === 'Access denied. Owner only.') {
-        setError(err.message)
-      } else {
-        setError('Invalid credentials. Access denied.')
+        errorMessage = 'Owner email mismatch. Access denied.'
+      } else if (err.message.includes('Firebase config is missing')) {
+        errorMessage = err.message
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        errorMessage = 'Wrong password.'
+      } else if (err.code === 'auth/user-not-found') {
+        errorMessage = 'User not found in Firebase Authentication.'
+      } else if (err.code === 'auth/invalid-api-key') {
+        errorMessage = 'Firebase API Key is invalid.'
+      } else if (err.message) {
+        errorMessage = err.message
       }
       
+      setError(errorMessage)
       try { await auth.signOut() } catch(e) {}
     } finally {
       setLoading(false)
