@@ -3,8 +3,18 @@ import { motion } from 'framer-motion'
 import { Search, Filter, Globe, Plus, X, ChevronDown } from 'lucide-react'
 import ProjectCard from '../components/ProjectCard'
 import defaultProjects from '../data/projects'
+import { loadTasks } from '../data/tasks'
 
 const PROJECTS_KEY = 'km_empire_projects'
+const ALERTS_KEY = 'km_empire_alerts'
+
+const loadAlerts = () => {
+  try {
+    const stored = localStorage.getItem(ALERTS_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch {}
+  return []
+}
 
 const loadProjects = () => {
   try {
@@ -26,12 +36,19 @@ const loadProjects = () => {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState(loadProjects)
+  const [alerts, setAlerts] = useState(loadAlerts)
+  const [tasks] = useState(loadTasks)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
   
   const [showAdd, setShowAdd] = useState(false)
   const [isStatusOpen, setIsStatusOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  
+  const [alertProject, setAlertProject] = useState(null)
+  const [alertFormData, setAlertFormData] = useState({
+    alertType: 'Website Down', severity: 'High', message: ''
+  })
   const [formData, setFormData] = useState({
     name: '', id: '', type: '', status: 'Development',
     liveUrl: '', adminUrl: '', githubUrl: '', vercelUrl: '', firebaseRoot: '', notes: ''
@@ -40,6 +57,29 @@ export default function ProjectsPage() {
   useEffect(() => {
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
   }, [projects])
+
+  useEffect(() => {
+    localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts))
+  }, [alerts])
+
+  const handleAddAlertSave = (e) => {
+    e.preventDefault()
+    if (!alertProject) return
+
+    const newAlert = {
+      id: Date.now().toString(),
+      projectId: alertProject.id,
+      projectName: alertProject.name,
+      ...alertFormData,
+      status: 'New',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    setAlerts([newAlert, ...alerts])
+    setAlertProject(null)
+    setAlertFormData({ alertType: 'Website Down', severity: 'High', message: '' })
+  }
 
   const filters = ['All', 'Live', 'Development', 'Maintenance', 'Warning', 'Error', 'Paused', 'Planning', 'Building']
 
@@ -250,7 +290,7 @@ export default function ProjectsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ProjectCard project={p} onEdit={handleEdit} onDelete={handleDelete} />
+            <ProjectCard project={p} onEdit={handleEdit} onDelete={handleDelete} onAddAlert={setAlertProject} alerts={alerts} tasks={tasks} />
           </motion.div>
         ))}
       </div>
@@ -259,6 +299,55 @@ export default function ProjectsPage() {
         <div className="text-center py-12">
           <Globe className="w-12 h-12 text-obsidian-muted/30 mx-auto mb-3" />
           <p className="text-sm text-obsidian-muted">No projects match your search.</p>
+        </div>
+      )}
+
+      {/* Add Alert Modal */}
+      {alertProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-dark/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md glass-card rounded-2xl p-6 border border-status-warning/30 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Create Alert: <span className="text-gold">{alertProject.name}</span></h3>
+              <button onClick={() => setAlertProject(null)} className="text-obsidian-muted hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddAlertSave} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Alert Type</label>
+                <select value={alertFormData.alertType} onChange={e => setAlertFormData({...alertFormData, alertType: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-warning/50 outline-none transition-colors">
+                  {['Website Down', 'Deploy Failed', 'Firebase Pending', 'Security Warning', 'Design Issue', 'Manual Note', 'Other'].map(opt => (
+                    <option key={opt} value={opt} className="bg-obsidian-dark">{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Severity</label>
+                <select value={alertFormData.severity} onChange={e => setAlertFormData({...alertFormData, severity: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-warning/50 outline-none transition-colors">
+                  {['Low', 'Medium', 'High', 'Critical'].map(opt => (
+                    <option key={opt} value={opt} className="bg-obsidian-dark">{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Message</label>
+                <textarea required value={alertFormData.message} onChange={e => setAlertFormData({...alertFormData, message: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-warning/50 outline-none transition-colors h-24 resize-none" placeholder="Describe the issue..."></textarea>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button type="submit" className="flex-1 py-2 rounded-xl text-sm font-bold bg-status-warning/10 text-status-warning border border-status-warning/30 hover:bg-status-warning hover:text-obsidian-dark transition-all">
+                  Create Alert
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
     </motion.div>

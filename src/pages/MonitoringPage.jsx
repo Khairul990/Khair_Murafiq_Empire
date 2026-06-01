@@ -1,13 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Activity, Shield, Link as LinkIcon, Gauge, RefreshCw,
-  CheckCircle, XCircle, Clock, AlertTriangle, Camera,
+  CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2
 } from 'lucide-react'
 import monitoring from '../data/monitoring'
 
+const ALERTS_KEY = 'km_empire_alerts'
+
+const loadAlerts = () => {
+  try {
+    const stored = localStorage.getItem(ALERTS_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch {}
+  return []
+}
+
 export default function MonitoringPage() {
   const [scanning, setScanning] = useState(false)
+  const [alerts, setAlerts] = useState(loadAlerts)
+
+  useEffect(() => {
+    localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts))
+  }, [alerts])
+
+  const handleUpdateStatus = (id, newStatus) => {
+    setAlerts(alerts.map(a => a.id === id ? { ...a, status: newStatus, updatedAt: new Date().toISOString() } : a))
+  }
+
+  const handleDeleteAlert = (id) => {
+    if (window.confirm('Are you sure you want to delete this alert?')) {
+      setAlerts(alerts.filter(a => a.id !== id))
+    }
+  }
 
   const handleRunCheck = () => {
     setScanning(true)
@@ -110,35 +135,78 @@ export default function MonitoringPage() {
         </div>
       </div>
 
-      {/* Recent Incidents */}
+      {/* Empire Alerts */}
       <div className="glass-card rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-4 h-4 text-gold" />
-          <h3 className="text-white font-bold text-sm">Recent Incidents</h3>
-          <span className="text-[10px] text-obsidian-muted ml-1">(Last 30 days)</span>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-status-warning" />
+            <h3 className="text-white font-bold text-sm">Empire Alerts</h3>
+            <span className="px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning text-[10px] font-bold">
+              {alerts.length} Total
+            </span>
+          </div>
         </div>
-        <div className="space-y-2">
-          {monitoring.recentIncidents.map((inc, i) => (
-            <div key={i} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-obsidian-card/50 border border-obsidian-border">
-              <div className="flex items-center gap-3">
-                {inc.resolved
-                  ? <CheckCircle className="w-4 h-4 text-status-live" />
-                  : <AlertTriangle className="w-4 h-4 text-status-warning" />
-                }
-                <div>
-                  <p className="text-sm font-semibold text-white">{inc.type}</p>
-                  <p className="text-xs text-obsidian-muted">{inc.description}</p>
+
+        {alerts.length === 0 ? (
+          <div className="text-center py-8">
+            <CheckCircle className="w-10 h-10 text-status-live/50 mx-auto mb-2" />
+            <p className="text-xs text-obsidian-muted">All systems secure. No active alerts.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {alerts.map((alert) => (
+              <div key={alert.id} className="p-4 rounded-xl bg-obsidian-card/50 border border-obsidian-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                      alert.severity === 'Critical' ? 'text-status-error bg-status-error/10 border-status-error/30 animate-pulse' :
+                      alert.severity === 'High' ? 'text-orange-400 bg-orange-400/10 border-orange-400/30' :
+                      alert.severity === 'Medium' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' :
+                      'text-blue-400 bg-blue-400/10 border-blue-400/30'
+                    }`}>
+                      {alert.severity}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                      alert.status === 'Fixed' ? 'text-status-live bg-status-live/10 border-status-live/30' :
+                      alert.status === 'Ignored' ? 'text-obsidian-muted bg-obsidian-light border-obsidian-border' :
+                      alert.status === 'Reviewing' ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' :
+                      'text-status-warning bg-status-warning/10 border-status-warning/30'
+                    }`}>
+                      {alert.status}
+                    </span>
+                    <span className="text-xs font-bold text-white ml-2">{alert.projectName}</span>
+                  </div>
+                  <p className="text-sm text-white font-semibold mb-1">{alert.alertType}</p>
+                  <p className="text-xs text-obsidian-muted">{alert.message}</p>
+                  <p className="text-[10px] text-obsidian-muted/50 mt-2">Added: {new Date(alert.createdAt).toLocaleString()}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 md:flex-col md:items-end md:gap-2">
+                  <div className="flex gap-2">
+                    {alert.status !== 'Fixed' && (
+                      <button onClick={() => handleUpdateStatus(alert.id, 'Fixed')} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-status-live/10 text-status-live border border-status-live/20 hover:bg-status-live hover:text-obsidian-dark transition-all">
+                        Mark Fixed
+                      </button>
+                    )}
+                    {alert.status !== 'Reviewing' && alert.status !== 'Fixed' && (
+                      <button onClick={() => handleUpdateStatus(alert.id, 'Reviewing')} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all">
+                        Reviewing
+                      </button>
+                    )}
+                    {alert.status !== 'Ignored' && alert.status !== 'Fixed' && (
+                      <button onClick={() => handleUpdateStatus(alert.id, 'Ignored')} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-obsidian-light text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
+                        Ignore
+                      </button>
+                    )}
+                  </div>
+                  <button onClick={() => handleDeleteAlert(alert.id)} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-status-error/10 text-status-error border border-status-error/20 hover:bg-status-error hover:text-white transition-all flex items-center gap-1 mt-1 md:mt-0">
+                    <Trash2 className="w-3 h-3" /> Delete
+                  </button>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0 ml-3">
-                <span className={`text-[10px] font-semibold ${inc.resolved ? 'text-status-live' : 'text-status-warning'}`}>
-                  {inc.resolved ? 'Resolved' : 'Open'}
-                </span>
-                <p className="text-[10px] text-obsidian-muted">{inc.date}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   )

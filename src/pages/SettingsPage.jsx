@@ -1,11 +1,104 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Settings, User, Bell, Globe, Zap, Database, Shield } from 'lucide-react'
+import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut } from 'lucide-react'
+import { logActivity } from '../data/activity'
+import { auth } from '../services/firebase'
+import { signOut } from 'firebase/auth'
 
 export default function SettingsPage() {
   const [ecoMode, setEcoMode] = useState(false)
   const [lang, setLang] = useState('en')
   
+  const [previewData, setPreviewData] = useState(null)
+  const fileInputRef = useRef(null)
+
+  const exportData = (keysToExport, filename) => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      appName: 'Khair Murafiq Empire OS',
+      version: '1.0.0'
+    }
+    
+    keysToExport.forEach(key => {
+      try {
+        const val = localStorage.getItem(key)
+        data[key.replace('km_empire_', '')] = val ? JSON.parse(val) : []
+      } catch {
+        data[key.replace('km_empire_', '')] = []
+      }
+    })
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    logActivity('Data exported', `Exported ${filename}`)
+  }
+
+  const handleExportAll = () => {
+    exportData([
+      'km_empire_projects', 'km_empire_alerts', 'km_empire_tasks', 
+      'km_empire_finance', 'km_empire_goals', 'km_empire_social_posts', 'km_empire_settings'
+    ], `empire_os_full_backup_${new Date().toISOString().split('T')[0]}.json`)
+  }
+
+  const handleExportSpecific = (type, key) => {
+    exportData([key], `empire_os_${type}_${new Date().toISOString().split('T')[0]}.json`)
+  }
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result)
+        if (json.appName !== 'Khair Murafiq Empire OS') {
+          alert("Invalid backup file! Missing appName identifier.")
+          return
+        }
+        setPreviewData(json)
+      } catch {
+        alert("Failed to parse JSON backup file.")
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = null // reset input
+  }
+
+  const handleConfirmRestore = () => {
+    if (!window.confirm("CRITICAL WARNING: This will overwrite your current local data with the backup data. Are you sure you want to proceed?")) {
+      return
+    }
+
+    if (previewData.projects) localStorage.setItem('km_empire_projects', JSON.stringify(previewData.projects))
+    if (previewData.alerts) localStorage.setItem('km_empire_alerts', JSON.stringify(previewData.alerts))
+    if (previewData.tasks) localStorage.setItem('km_empire_tasks', JSON.stringify(previewData.tasks))
+    if (previewData.finance) localStorage.setItem('km_empire_finance', JSON.stringify(previewData.finance))
+    if (previewData.goals) localStorage.setItem('km_empire_goals', JSON.stringify(previewData.goals))
+    if (previewData.social_posts) localStorage.setItem('km_empire_social_posts', JSON.stringify(previewData.social_posts))
+    if (previewData.settings) localStorage.setItem('km_empire_settings', JSON.stringify(previewData.settings))
+    
+    logActivity('Backup imported', `Restored backup from ${previewData.exportedAt}`)
+    
+    setPreviewData(null)
+    alert("Data restored successfully! Please refresh the page to see changes.")
+    window.location.reload()
+  }
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      logActivity('Logged out', 'Owner securely logged out of the dashboard')
+    } catch (e) {
+      alert("Failed to log out")
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -13,17 +106,128 @@ export default function SettingsPage() {
       transition={{ duration: 0.3 }}
       className="space-y-5"
     >
-      <div>
-        <h1 className="text-xl lg:text-2xl font-extrabold text-white">
-          System <span className="gold-gradient-text">Settings</span>
-        </h1>
-        <p className="text-xs text-obsidian-muted mt-1">
-          Configure your Empire OS preferences
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-extrabold text-white">
+            System <span className="gold-gradient-text">Settings</span>
+          </h1>
+          <p className="text-xs text-obsidian-muted mt-1">
+            Configure your Empire OS preferences and manage your data.
+          </p>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-status-error/10 border border-status-error/30 text-status-error hover:bg-status-error hover:text-white transition-all"
+        >
+          <LogOut className="w-4 h-4" /> Log Out
+        </button>
       </div>
+
+      {/* Preview Modal Overlay */}
+      {previewData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-dark/90 backdrop-blur-sm">
+          <div className="bg-obsidian-card border border-obsidian-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-status-warning" />
+              <h2 className="text-lg font-bold text-white">Confirm Backup Restore</h2>
+            </div>
+            <p className="text-sm text-obsidian-muted mb-4">
+              You are about to restore data exported on <strong>{new Date(previewData.exportedAt).toLocaleString()}</strong>.
+            </p>
+            
+            <div className="space-y-2 mb-6">
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">Projects</span>
+                <span className="font-bold text-white">{previewData.projects?.length || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">Tasks</span>
+                <span className="font-bold text-white">{previewData.tasks?.length || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">Alerts</span>
+                <span className="font-bold text-white">{previewData.alerts?.length || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted">Finance Entries</span>
+                <span className="font-bold text-white">{previewData.finance?.length || 0}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={handleConfirmRestore} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-status-warning/20 border border-status-warning/50 hover:bg-status-warning hover:text-obsidian-dark transition-all">
+                Confirm & Overwrite
+              </button>
+              <button onClick={() => setPreviewData(null)} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
+        {/* Backup & Restore Center */}
+        <div className="glass-card rounded-2xl p-5 lg:col-span-2 border border-gold/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="w-5 h-5 text-gold" />
+            <h3 className="text-white font-bold text-sm">Backup & Restore Center</h3>
+            <span className="px-2 py-0.5 rounded-full bg-status-dev/10 text-status-dev text-[10px] font-bold border border-status-dev/30 ml-2">
+              Offline Mode Active
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="text-xs text-obsidian-muted font-semibold uppercase tracking-wider">Export Data</h4>
+              <p className="text-[10px] text-obsidian-muted/70 mb-2">Download your local storage data as a secure JSON file to prevent loss.</p>
+              
+              <button onClick={handleExportAll} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold gold-gradient text-obsidian-dark hover:opacity-90 transition-all">
+                <Download className="w-4 h-4" /> Export All Data
+              </button>
+              
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button onClick={() => handleExportSpecific('projects', 'km_empire_projects')} className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-semibold bg-obsidian-card border border-obsidian-border text-white hover:border-gold/50 transition-all">
+                  <FileJson className="w-3 h-3 text-gold" /> Projects
+                </button>
+                <button onClick={() => handleExportSpecific('tasks', 'km_empire_tasks')} className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-semibold bg-obsidian-card border border-obsidian-border text-white hover:border-gold/50 transition-all">
+                  <FileJson className="w-3 h-3 text-blue-400" /> Tasks
+                </button>
+                <button onClick={() => handleExportSpecific('alerts', 'km_empire_alerts')} className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-semibold bg-obsidian-card border border-obsidian-border text-white hover:border-gold/50 transition-all">
+                  <FileJson className="w-3 h-3 text-status-warning" /> Alerts
+                </button>
+                <button onClick={() => handleExportSpecific('finance', 'km_empire_finance')} className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-semibold bg-obsidian-card border border-obsidian-border text-white hover:border-gold/50 transition-all">
+                  <FileJson className="w-3 h-3 text-status-live" /> Finance
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-xs text-obsidian-muted font-semibold uppercase tracking-wider">Import Data</h4>
+              <p className="text-[10px] text-obsidian-muted/70 mb-2">Restore data from a previously downloaded JSON backup file.</p>
+              
+              <input 
+                type="file" 
+                accept=".json" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="hidden" 
+              />
+              <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold bg-obsidian-dark text-white border border-obsidian-border hover:border-blue-400/50 hover:bg-blue-400/10 transition-all">
+                <Upload className="w-4 h-4" /> Select Backup File to Restore
+              </button>
+              
+              <div className="bg-obsidian-card/50 border border-status-warning/20 rounded-xl p-3 flex gap-2 items-start mt-2">
+                <AlertTriangle className="w-4 h-4 text-status-warning flex-shrink-0" />
+                <p className="text-[9px] text-obsidian-muted leading-tight">
+                  Importing a backup will <strong className="text-status-warning">overwrite</strong> your current local data. A preview will be shown before confirmation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Profile */}
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -57,7 +261,7 @@ export default function SettingsPage() {
                   <p className="text-[10px] text-obsidian-muted">Interface language</p>
                 </div>
               </div>
-              <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-obsidian-card border border-obsidian-border rounded-lg px-2 py-1 text-xs text-white">
+              <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-obsidian-card border border-obsidian-border rounded-lg px-2 py-1 text-xs text-white outline-none">
                 <option value="en">English</option>
                 <option value="bn">Bangla</option>
               </select>
@@ -75,43 +279,9 @@ export default function SettingsPage() {
                 {ecoMode ? 'Eco Mode' : 'Turbo Mode'}
               </button>
             </div>
-
-            <div className="flex items-center justify-between p-3 rounded-xl bg-obsidian-card/50 border border-obsidian-border">
-              <div className="flex items-center gap-3">
-                <Bell className="w-4 h-4 text-obsidian-muted" />
-                <div>
-                  <p className="text-sm font-semibold text-white">Notifications</p>
-                  <p className="text-[10px] text-obsidian-muted">Push & Email alerts</p>
-                </div>
-              </div>
-              <div className="w-8 h-4 bg-gold/30 rounded-full relative cursor-pointer border border-gold/20">
-                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-gold rounded-full" />
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* API Connections */}
-        <div className="glass-card rounded-2xl p-5 lg:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <Database className="w-4 h-4 text-gold" />
-            <h3 className="text-white font-bold text-sm">API Connection Status (Phase 1)</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { name: 'Firebase Database', status: 'Mock / LocalStorage' },
-              { name: 'WhatsApp Cloud API', status: 'Not Connected' },
-              { name: 'Vercel Deployment', status: 'Not Connected' },
-            ].map((api, i) => (
-              <div key={i} className="p-3 rounded-xl bg-obsidian-card/50 border border-obsidian-border flex items-center justify-between">
-                <span className="text-xs text-white">{api.name}</span>
-                <span className="px-2 py-0.5 rounded text-[9px] font-semibold text-obsidian-muted bg-obsidian-card border border-obsidian-border">
-                  {api.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </motion.div>
   )

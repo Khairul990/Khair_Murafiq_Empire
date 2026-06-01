@@ -1,4 +1,4 @@
-import { ExternalLink, Code, Globe, Shield, FileText, Database, Edit2, Trash2 } from 'lucide-react'
+import { ExternalLink, Code, Globe, Shield, FileText, Database, Edit2, Trash2, AlertTriangle, PlusCircle } from 'lucide-react'
 
 const statusColors = {
   Live: 'live',
@@ -11,15 +11,39 @@ const statusColors = {
   Building: 'building',
 }
 
-export default function ProjectCard({ project, onEdit, onDelete }) {
+export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, alerts = [], tasks = [] }) {
   const statusClass = statusColors[project.status] || 'offline'
+  
+  const projectAlerts = alerts.filter(a => a.projectId === project.id && a.status !== 'Fixed' && a.status !== 'Ignored')
+  const hasCritical = projectAlerts.some(a => a.severity === 'Critical')
+
+  const projectTasks = tasks.filter(t => t.projectId === project.id)
+  const activeTasks = projectTasks.filter(t => t.status !== 'Completed')
+  const hasBlockedOrCriticalTask = activeTasks.some(t => t.status === 'Blocked' || t.priority === 'Critical')
 
   return (
     <div className="glass-card-hover rounded-2xl p-5 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-white font-bold text-base truncate">{project.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-white font-bold text-base truncate">{project.name}</h3>
+            {projectAlerts.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                hasCritical ? 'text-status-error bg-status-error/10 border-status-error/30 animate-pulse' : 'text-status-warning bg-status-warning/10 border-status-warning/30'
+              }`}>
+                {projectAlerts.length} {projectAlerts.length === 1 ? 'Alert' : 'Alerts'}
+              </span>
+            )}
+            <div className="relative">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border text-blue-400 bg-blue-400/10 border-blue-400/30">
+                {projectTasks.length} {projectTasks.length === 1 ? 'Task' : 'Tasks'}
+              </span>
+              {hasBlockedOrCriticalTask && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+              )}
+            </div>
+          </div>
           <p className="text-xs text-obsidian-muted mt-0.5">{project.type}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
@@ -123,8 +147,8 @@ export default function ProjectCard({ project, onEdit, onDelete }) {
         >
           <ExternalLink className="w-3 h-3" /> Vercel
         </a>
-        <button className="flex-1 min-w-[30%] flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-semibold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-gold transition-all">
-          <FileText className="w-3 h-3" /> Details
+        <button onClick={() => onAddAlert?.(project)} className="flex-1 min-w-[30%] flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-semibold bg-obsidian-card text-status-warning border border-obsidian-border hover:border-status-warning/50 hover:bg-status-warning/10 transition-all">
+          <PlusCircle className="w-3 h-3" /> Add Alert
         </button>
       </div>
     </div>

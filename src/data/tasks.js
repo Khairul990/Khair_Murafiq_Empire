@@ -4,90 +4,84 @@ const defaultTasks = [
   {
     id: 1,
     title: 'Deploy BillQyro beta to Firebase',
-    project: 'BillQyro',
-    assignedTo: 'Khairul Islam',
+    description: 'Initial production deploy to Firebase Hosting and Firestore setup.',
+    projectId: 'billqyro',
+    projectName: 'BillQyro',
     priority: 'High',
-    status: 'Working',
+    status: 'In Progress',
     dueDate: '2026-06-10',
-    createdAt: '2026-05-28',
+    createdAt: '2026-05-28T10:00:00.000Z',
+    updatedAt: '2026-05-28T10:00:00.000Z'
   },
   {
     id: 2,
     title: 'Complete Empire OS Phase 1 UI',
-    project: 'Khair Murafiq Empire OS',
-    assignedTo: 'Khairul Islam',
+    description: 'Finalize all dashboard screens, control room, tasks, and settings.',
+    projectId: 'khair-murafiq-empire-os',
+    projectName: 'Khair Murafiq Empire OS',
     priority: 'High',
-    status: 'Working',
+    status: 'In Progress',
     dueDate: '2026-06-05',
-    createdAt: '2026-05-30',
+    createdAt: '2026-05-30T10:00:00.000Z',
+    updatedAt: '2026-05-30T10:00:00.000Z'
   },
   {
     id: 3,
     title: 'Set up payment gateway for BillQyro',
-    project: 'BillQyro',
-    assignedTo: 'Staff Member 1',
+    description: 'Integrate Stripe and verify webhooks.',
+    projectId: 'billqyro',
+    projectName: 'BillQyro',
     priority: 'Medium',
     status: 'Pending',
     dueDate: '2026-06-15',
-    createdAt: '2026-05-25',
+    createdAt: '2026-05-25T10:00:00.000Z',
+    updatedAt: '2026-05-25T10:00:00.000Z'
   },
   {
     id: 4,
     title: 'Research AI embroidery models',
-    project: 'Embroidery AI Tool',
-    assignedTo: 'Staff Member 2',
+    description: 'Evaluate stable diffusion models for embroidery patterns.',
+    projectId: 'embroidery-ai-tool',
+    projectName: 'Embroidery AI Tool',
     priority: 'Medium',
     status: 'Pending',
     dueDate: '2026-07-01',
-    createdAt: '2026-05-20',
+    createdAt: '2026-05-20T10:00:00.000Z',
+    updatedAt: '2026-05-20T10:00:00.000Z'
   },
   {
     id: 5,
     title: 'Audit admin panel security rules',
-    project: 'Khair Murafiq Empire OS',
-    assignedTo: 'Khairul Islam',
-    priority: 'High',
-    status: 'Pending',
+    description: 'Review Firestore rules and ensure no read/write holes.',
+    projectId: 'khair-murafiq-empire-os',
+    projectName: 'Khair Murafiq Empire OS',
+    priority: 'Critical',
+    status: 'Blocked',
     dueDate: '2026-06-08',
-    createdAt: '2026-05-22',
-  },
-  {
-    id: 6,
-    title: 'Write blog post: SaaS building journey',
-    project: 'TechWithKhairul Blog',
-    assignedTo: 'Khairul Islam',
-    priority: 'Low',
-    status: 'Pending',
-    dueDate: '2026-06-25',
-    createdAt: '2026-05-29',
-  },
-  {
-    id: 7,
-    title: 'Create Gopal Bhar storyboard',
-    project: 'Gopal Bhar Cartoon Studio',
-    assignedTo: 'Staff Member 3',
-    priority: 'Medium',
-    status: 'Pending',
-    dueDate: '2026-06-20',
-    createdAt: '2026-05-26',
-  },
-  {
-    id: 8,
-    title: 'Test PWA offline features',
-    project: 'BillQyro',
-    assignedTo: 'Staff Member 1',
-    priority: 'Medium',
-    status: 'Review',
-    dueDate: '2026-06-12',
-    createdAt: '2026-05-24',
-  },
+    createdAt: '2026-05-22T10:00:00.000Z',
+    updatedAt: '2026-05-22T10:00:00.000Z'
+  }
 ]
 
 const loadTasks = () => {
   try {
     const stored = localStorage.getItem(TASKS_KEY)
-    if (stored) return JSON.parse(stored)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Migration for old schema
+      return parsed.map(t => ({
+        ...t,
+        description: t.description || '',
+        projectName: t.projectName || t.project || 'General / No Project',
+        projectId: t.projectId || (t.project ? t.project.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'general'),
+        status: t.status === 'Working' ? 'In Progress' : (t.status === 'Done' ? 'Completed' : (t.status === 'Review' ? 'In Progress' : t.status)),
+        priority: t.priority || 'Medium',
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString()
+      }))
+    }
   } catch {}
+  
   localStorage.setItem(TASKS_KEY, JSON.stringify(defaultTasks))
   return [...defaultTasks]
 }
@@ -97,7 +91,7 @@ const saveTasks = (tasks) => {
 }
 
 const getNextId = (tasks) => {
-  return tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1
+  return tasks.length > 0 ? Math.max(...tasks.map(t => parseInt(t.id) || 0)) + 1 : 1
 }
 
 export { loadTasks, saveTasks, getNextId, TASKS_KEY }
