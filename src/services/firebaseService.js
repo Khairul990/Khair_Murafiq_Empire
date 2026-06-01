@@ -9,8 +9,8 @@
  * initialization will be injected here using environment variables (e.g., import.meta.env).
  */
 
-import { db } from './firebaseConfig'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { db, auth } from './firebaseConfig'
+import { doc, setDoc, getDoc, collection, writeBatch, getDocs } from 'firebase/firestore'
 
 // Helper to inject standard fields
 const withStandardFields = (data) => ({
@@ -91,6 +91,98 @@ export const firebaseService = {
       if (error.code?.includes('network')) return { success: false, message: 'Network error' }
       if (error.message?.includes('Missing or insufficient permissions')) return { success: false, message: 'Permission denied' }
       return { success: false, message: 'Failed' }
+    }
+  },
+
+  // MIGRATION
+  migrateDataToFirestore: async (localData) => {
+    try {
+      if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') {
+        throw new Error("Access Denied: Owner only")
+      }
+      
+      const email = auth.currentUser.email
+      const migratedAt = new Date().toISOString()
+      let batch = writeBatch(db)
+      let operationCount = 0
+      
+      const commitBatchIfNeeded = async () => {
+        if (operationCount >= 450) {
+          await batch.commit()
+          batch = writeBatch(db)
+          operationCount = 0
+        }
+      }
+
+      const migrateCollection = async (items, collectionName) => {
+        if (!items || !items.length) return 0
+        for (const item of items) {
+          const docId = String(item.id || item.timestamp || Date.now() + Math.random().toString(36).substring(7))
+          const docRef = doc(db, collectionName, docId)
+          batch.set(docRef, {
+            ...item,
+            ownerEmail: email,
+            createdAt: item.createdAt || migratedAt,
+            updatedAt: item.updatedAt || migratedAt,
+            source: "local_migration",
+            migratedAt: migratedAt,
+            originalLocalId: item.id || null
+          })
+          operationCount++
+          await commitBatchIfNeeded()
+        }
+        return items.length
+      }
+      
+      const projectsCount = await migrateCollection(localData.projects, 'control_projects')
+      const tasksCount = await migrateCollection(localData.tasks, 'control_tasks')
+      const alertsCount = await migrateCollection(localData.alerts, 'control_alerts')
+      
+      const reportsData = [...(localData.finance || []), ...(localData.social_posts || [])]
+      const reportsCount = await migrateCollection(reportsData, 'control_reports')
+      
+      const settingsData = [...(localData.goals || []), ...(localData.settings ? [localData.settings] : [])]
+      const settingsCount = await migrateCollection(settingsData, 'control_settings')
+      
+      // Activity Log
+      const logRef = doc(db, 'control_activity_logs', `migration_${Date.now()}`)
+      batch.set(logRef, {
+        action: "local_to_firestore_migration",
+        ownerEmail: email,
+        migratedAt: migratedAt,
+        status: "success",
+        counts: {
+          projects: projectsCount,
+          tasks: tasksCount,
+          alerts: alertsCount,
+          reports: reportsCount,
+          settings: settingsCount
+        }
+      })
+      operationCount++
+      
+      if (operationCount > 0) {
+        await batch.commit()
+      }
+      
+      return { success: true, counts: { projects: projectsCount, tasks: tasksCount, alerts: alertsCount, reports: reportsCount, settings: settingsCount } }
+    } catch (error) {
+      console.error("Migration Error:", error)
+      return { success: false, error: error.message }
+    }
+  },
+
+  verifyMigration: async () => {
+    try {
+      const [proj, task, alrt] = await Promise.all([
+        getDocs(collection(db, 'control_projects')),
+        getDocs(collection(db, 'control_tasks')),
+        getDocs(collection(db, 'control_alerts'))
+      ])
+      return { success: true, projects: proj.size, tasks: task.size, alerts: alrt.size }
+    } catch (error) {
+      console.error("Verification Error:", error)
+      return { success: false, error: error.message }
     }
   }
 }

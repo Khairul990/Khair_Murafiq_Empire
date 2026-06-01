@@ -15,6 +15,10 @@ export default function SettingsPage() {
 
   const [previewData, setPreviewData] = useState(null)
   const [migrationPreview, setMigrationPreview] = useState(null)
+  const [backupDownloaded, setBackupDownloaded] = useState(false)
+  const [migrationConfirmText, setMigrationConfirmText] = useState('')
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [migrationResult, setMigrationResult] = useState(null)
   const fileInputRef = useRef(null)
 
   const exportData = (keysToExport, filename) => {
@@ -49,6 +53,7 @@ export default function SettingsPage() {
       'km_empire_projects', 'km_empire_alerts', 'km_empire_tasks', 
       'km_empire_finance', 'km_empire_goals', 'km_empire_social_posts', 'km_empire_settings'
     ], `km-empire-backup-${new Date().toISOString().split('T')[0]}.json`)
+    setBackupDownloaded(true)
   }
 
   const handleExportSpecific = (type, key) => {
@@ -121,15 +126,52 @@ export default function SettingsPage() {
         return Array.isArray(parsed) ? parsed.length : (parsed ? Object.keys(parsed).length : 0)
       } catch { return 0 }
     }
-    
-    setMigrationPreview({
+
+    const mData = {
       projects: getCount('km_empire_projects'),
       tasks: getCount('km_empire_tasks'),
       alerts: getCount('km_empire_alerts'),
       finance: getCount('km_empire_finance'),
-      social: getCount('km_empire_social_posts'),
-      goals: getCount('km_empire_goals')
-    })
+      social_posts: getCount('km_empire_social_posts'),
+      goals: getCount('km_empire_goals'),
+      settings: getCount('km_empire_settings')
+    }
+    
+    setMigrationPreview(mData)
+  }
+
+  const handleRunMigration = async () => {
+    if (migrationConfirmText !== 'MIGRATE') return
+    
+    setIsMigrating(true)
+    
+    // Read fresh data
+    const localData = {
+      projects: JSON.parse(localStorage.getItem('km_empire_projects') || '[]'),
+      tasks: JSON.parse(localStorage.getItem('km_empire_tasks') || '[]'),
+      alerts: JSON.parse(localStorage.getItem('km_empire_alerts') || '[]'),
+      finance: JSON.parse(localStorage.getItem('km_empire_finance') || '[]'),
+      social_posts: JSON.parse(localStorage.getItem('km_empire_social_posts') || '[]'),
+      goals: JSON.parse(localStorage.getItem('km_empire_goals') || '[]'),
+      settings: JSON.parse(localStorage.getItem('km_empire_settings') || 'null')
+    }
+
+    const result = await firebaseService.migrateDataToFirestore(localData)
+    
+    if (result.success) {
+      const verify = await firebaseService.verifyMigration()
+      if (verify.success) {
+        setMigrationResult({ success: true, message: `Migration verified! P:${verify.projects} T:${verify.tasks} A:${verify.alerts}` })
+      } else {
+        setMigrationResult({ success: true, message: `Migration completed but verification failed: ${verify.error}` })
+      }
+    } else {
+      setMigrationResult({ success: false, message: `Migration failed: ${result.error}` })
+    }
+    
+    setIsMigrating(false)
+    setMigrationConfirmText('')
+    setMigrationPreview(null)
   }
 
   return (
@@ -225,27 +267,37 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted">control_reports (finance/social)</span>
-                <span className="font-bold text-white">{migrationPreview.finance + migrationPreview.social} items</span>
+                <span className="font-bold text-white">{migrationPreview.finance + migrationPreview.social_posts} items</span>
               </div>
               <div className="flex justify-between text-xs p-2 rounded bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted">control_settings (goals/config)</span>
-                <span className="font-bold text-white">{migrationPreview.goals + 1} items</span>
+                <span className="font-bold text-white">{migrationPreview.goals + (migrationPreview.settings ? 1 : 0)} items</span>
               </div>
             </div>
 
-            <div className="bg-status-warning/10 border border-status-warning/30 rounded-xl p-3 flex gap-2 items-start mb-6">
-              <AlertTriangle className="w-4 h-4 text-status-warning flex-shrink-0" />
-              <p className="text-[10px] text-status-warning font-bold leading-tight">
-                Backup required before migration. Migration will not start until owner confirms.
+            <div className="bg-status-warning/10 border border-status-warning/30 rounded-xl p-3 mb-4">
+              <p className="text-[10px] text-status-warning font-bold leading-tight mb-2">
+                Type MIGRATE below to confirm.
               </p>
+              <input 
+                type="text" 
+                value={migrationConfirmText}
+                onChange={(e) => setMigrationConfirmText(e.target.value)}
+                placeholder="MIGRATE"
+                className="w-full bg-obsidian-dark border border-status-warning/50 rounded p-2 text-white text-xs text-center font-bold outline-none uppercase"
+              />
             </div>
 
             <div className="flex gap-3">
-              <button disabled className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-500/20 border border-blue-500/50 opacity-50 cursor-not-allowed">
-                Migration Locked
+              <button 
+                onClick={handleRunMigration}
+                disabled={migrationConfirmText !== 'MIGRATE' || isMigrating}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-obsidian-dark bg-status-warning hover:bg-status-warning/90 transition-all disabled:opacity-50 disabled:bg-obsidian-dark disabled:text-obsidian-muted disabled:border-obsidian-border"
+              >
+                {isMigrating ? 'Migrating...' : 'Confirm Migration'}
               </button>
-              <button onClick={() => setMigrationPreview(null)} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
-                Close Preview
+              <button onClick={() => { setMigrationPreview(null); setMigrationConfirmText(''); }} disabled={isMigrating} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:text-white transition-all">
+                Cancel
               </button>
             </div>
           </div>
@@ -348,7 +400,11 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Migration</span>
-                <span className="font-bold text-status-warning">Backup Required Before Migration</span>
+                {migrationResult?.success ? (
+                  <span className="font-bold text-status-live">Completed / Verification Passed</span>
+                ) : (
+                  <span className="font-bold text-status-warning">Backup Required Before Migration</span>
+                )}
               </div>
             </div>
 
@@ -420,19 +476,42 @@ export default function SettingsPage() {
                   Firebase test only. Your dashboard data is still stored locally.
                 </p>
 
+                {migrationResult && (
+                  <div className={`p-3 rounded-lg text-xs font-bold mb-3 ${migrationResult.success ? 'bg-status-live/20 text-status-live border border-status-live/30' : 'bg-status-error/20 text-status-error border border-status-error/30'}`}>
+                    <p>{migrationResult.message}</p>
+                    {migrationResult.success && <p className="text-[10px] mt-1 text-obsidian-muted">Migration complete. Local backup data is still preserved.</p>}
+                  </div>
+                )}
+
                 <div className="space-y-3 pt-3 border-t border-obsidian-border">
-                  <button 
-                    onClick={handlePreviewMigration}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-obsidian-card text-white border border-obsidian-border hover:border-blue-400 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Database className="w-4 h-4" /> Preview Firebase Migration
-                  </button>
-                  <button 
-                    disabled
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-status-error/10 text-status-error border border-status-error/30 opacity-75 cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    Migration Locked — Backup Required
-                  </button>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input 
+                      type="checkbox" 
+                      id="backup-confirm" 
+                      checked={backupDownloaded}
+                      onChange={(e) => setBackupDownloaded(e.target.checked)}
+                      className="accent-status-live w-3 h-3"
+                    />
+                    <label htmlFor="backup-confirm" className="text-[10px] text-obsidian-muted cursor-pointer">
+                      I confirm I downloaded my backup JSON file.
+                    </label>
+                  </div>
+                  
+                  {testResult?.success && backupDownloaded ? (
+                    <button 
+                      onClick={handlePreviewMigration}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-status-warning text-obsidian-dark hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Database className="w-4 h-4" /> Migrate Local Data to Firebase
+                    </button>
+                  ) : (
+                    <button 
+                      disabled
+                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-status-error/10 text-status-error border border-status-error/30 opacity-75 cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      Migration Locked — Check Backup & Test Connection
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
