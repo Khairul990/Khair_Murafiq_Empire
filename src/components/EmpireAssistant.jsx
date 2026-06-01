@@ -376,7 +376,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       {/* Assistant Panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-8rem)] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
+        <div className="fixed bottom-24 right-6 z-50 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gold/10 bg-obsidian-dark/50 rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -412,6 +412,9 @@ export default function EmpireAssistant({ open, onToggle }) {
                 className="px-2 py-1 text-[10px] font-bold rounded-md bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20 transition-colors"
               >
                 {lang === 'en' ? 'বাংলা' : 'English'}
+              </button>
+              <button onClick={onToggle} className="text-obsidian-muted hover:text-white transition-colors ml-1" title="Close">
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -454,6 +457,7 @@ export default function EmpireAssistant({ open, onToggle }) {
                   {quietMode ? 'ON' : 'OFF'}
                 </button>
               </div>
+              {quietMode && <p className="text-[10px] text-status-warning">Quiet Mode চালু আছে, তাই voice বাজবে না.</p>}
 
               <div className="bg-obsidian-card/50 p-2 rounded-lg border border-obsidian-border text-[10px] space-y-1">
                 <p>Status: <span className="text-white font-bold">{monitorActive ? (quietMode ? 'Monitoring but Quiet' : 'Active (Checking...)') : 'Off'}</span></p>
@@ -474,20 +478,30 @@ export default function EmpireAssistant({ open, onToggle }) {
               <FileText className="w-3.5 h-3.5" />
               {lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report'}
             </button>
-            <button 
-              onClick={handleVoice}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap transition-colors ${
-                isSpeaking 
-                  ? 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
-                  : 'bg-obsidian-card text-obsidian-muted border-obsidian-border hover:text-white'
-              }`}
-            >
-              {isSpeaking ? (
-                <>⏹ {lang === 'bn' ? 'বন্ধ করুন' : 'Stop'}</>
-              ) : (
-                <>🔊 {lang === 'bn' ? 'রিপোর্ট শুনুন' : 'Listen Report'}</>
+            <div className="relative group flex items-center">
+              <button 
+                onClick={handleVoice}
+                disabled={messages.length <= 1}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap transition-colors ${
+                  messages.length <= 1
+                    ? 'bg-obsidian-dark text-obsidian-muted border-obsidian-border/50 cursor-not-allowed'
+                    : isSpeaking 
+                    ? 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
+                    : 'bg-obsidian-card text-obsidian-muted border-obsidian-border hover:text-white'
+                }`}
+              >
+                {isSpeaking ? (
+                  <>⏹ {lang === 'bn' ? 'বন্ধ করুন' : 'Stop'}</>
+                ) : (
+                  <>🔊 {lang === 'bn' ? 'রিপোর্ট শুনুন' : 'Listen Report'}</>
+                )}
+              </button>
+              {messages.length <= 1 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max opacity-0 group-hover:opacity-100 transition-opacity bg-obsidian-dark text-white text-[10px] px-2 py-1 rounded border border-obsidian-border pointer-events-none z-10">
+                  আগে Quick Report তৈরি করুন.
+                </div>
               )}
-            </button>
+            </div>
             <button onClick={() => handleSend('এই পেজে কী করব?')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
               এই পেজে কী করব?
             </button>
