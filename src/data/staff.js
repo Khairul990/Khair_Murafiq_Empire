@@ -1,0 +1,48 @@
+const staff = [
+  {
+    id: 1,
+    name: 'Khairul Islam',
+    role: 'Owner / Super Admin',
+    project: 'All Projects',
+    task: 'Empire OS Development',
+    status: 'Working',
+    lastActive: 'Just now',
+    pendingReview: 2,
+    avatar: null,
+  },
+  {
+    id: 2,
+    name: 'Staff Member 1',
+    role: 'Manager',
+    project: 'BillQyro',
+    task: 'Payment Gateway Testing',
+    status: 'Review',
+    lastActive: '2 hours ago',
+    pendingReview: 1,
+    avatar: null,
+  },
+  {
+    id: 3,
+    name: 'Staff Member 2',
+    role: 'Staff',
+    project: 'Embroidery AI',
+    task: 'Dataset Collection',
+    status: 'Working',
+    lastActive: '1 day ago',
+    pendingReview: 0,
+    avatar: null,
+  },
+  {
+    id: 4,
+    name: 'Staff Member 3',
+    role: 'Staff',
+    project: 'Gopal Bhar Studio',
+    task: 'Storyboard Drafting',
+    status: 'Pending',
+    lastActive: '3 days ago',
+    pendingReview: 0,
+    avatar: null,
+  },
+]
+
+export default staff
