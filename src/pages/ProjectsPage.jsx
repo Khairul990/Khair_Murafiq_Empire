@@ -41,7 +41,7 @@ export default function ProjectsPage() {
         setAlerts(a)
         setTasks(t)
       } catch (err) {
-        setErrorMsg('Firebase unavailable. Showing local backup data.')
+        setErrorMsg('Firebase unavailable. Local fallback active.')
       }
       setIsLoading(false)
     }

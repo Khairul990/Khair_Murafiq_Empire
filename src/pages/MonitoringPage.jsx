@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X, Loader2
+  Activity, Shield, Gauge, CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X, Loader2
 } from 'lucide-react'
 import monitoring from '../data/monitoring'
 import { auth } from '../services/firebaseConfig'
@@ -30,7 +30,7 @@ export default function MonitoringPage() {
         setAlerts(a)
         setProjects(p)
       } catch (err) {
-        setErrorMsg('Firebase unavailable. Showing local backup data.')
+        setErrorMsg('Firebase unavailable. Local fallback active.')
       }
       setIsLoading(false)
     }

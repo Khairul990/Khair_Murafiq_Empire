@@ -379,8 +379,8 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firebase Config</span>
-                <span className="font-bold text-status-live">Ready</span>
+                <span className="text-obsidian-muted font-bold">Last Firebase Test</span>
+                <span className="font-bold text-status-live">Connected</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Firebase Auth</span>
