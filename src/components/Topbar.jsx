@@ -5,17 +5,18 @@ import { useState } from 'react'
 const pageTitles = {
   '/': 'Dashboard',
   '/projects': 'Website Control Room',
-  '/monitoring': 'CCTV Monitoring',
+  '/monitoring': 'CCTV Monitoring / Alert Center',
   '/staff': 'Staff Management',
   '/tasks': 'Task Manager',
-  '/finance': 'Finance Ledger',
-  '/whatsapp': 'WhatsApp Alert Center',
-  '/social': 'Social Media Planner',
+  '/finance': 'Finance Tracker',
+  '/whatsapp': 'WhatsApp Alerts',
+  '/social': 'Social Planner',
   '/affiliate': 'Affiliate Link Tracker',
   '/goals': 'Goals & Challenges',
   '/reports': 'Reports Center',
-  '/safety': 'Safety & Compliance',
-  '/settings': 'System Settings',
+  '/safety': 'Safety Rules',
+  '/api-engine': 'API Control Engine',
+  '/settings': 'Settings',
 }
 
 export default function Topbar({ onToggleAssistant }) {

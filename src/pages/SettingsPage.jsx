@@ -406,6 +406,10 @@ export default function SettingsPage() {
                 <span className="text-obsidian-muted font-bold">Migration</span>
                 <span className="font-bold text-status-live">Completed / Verification Passed</span>
               </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Backup</span>
+                <span className="font-bold text-status-live">Available</span>
+              </div>
             </div>
 
             <div className="space-y-3">

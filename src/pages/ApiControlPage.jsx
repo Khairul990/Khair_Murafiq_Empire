@@ -131,9 +131,9 @@ export default function ApiControlPage() {
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-status-error/10 text-status-error">High Risk</span>
                   <span className="text-xs text-white">Vercel Production Deploy</span>
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <button onClick={() => alert('Mock: Approve Action Disabled')} className="flex-1 py-1.5 rounded-lg text-xs font-bold gold-gradient text-obsidian-dark hover:opacity-90 transition-all">Approve</button>
-                  <button onClick={() => alert('Mock: Reject Action Disabled')} className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-white transition-all">Reject</button>
+                <div className="flex gap-2 mt-3 overflow-hidden">
+                  <button onClick={() => alert('Mock: Approve Action Disabled')} className="flex-1 min-w-0 py-1.5 px-2 rounded-lg text-[11px] font-bold gold-gradient text-obsidian-dark hover:opacity-90 transition-all truncate">Approve</button>
+                  <button onClick={() => alert('Mock: Reject Action Disabled')} className="flex-1 min-w-0 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-obsidian-card text-obsidian-muted border border-obsidian-border hover:text-white transition-all truncate">Reject</button>
                 </div>
               </div>
             </div>
