@@ -23,6 +23,12 @@ export default function ProjectsPage() {
   const [alertFormData, setAlertFormData] = useState({
     alertType: 'Website Down', severity: 'High', message: ''
   })
+  
+  const [healthProject, setHealthProject] = useState(null)
+  const [healthFormData, setHealthFormData] = useState({
+    healthStatus: 'Healthy', healthScore: 100, issueSummary: '', uptimeNote: ''
+  })
+
   const [formData, setFormData] = useState({
     name: '', id: '', type: '', status: 'Development',
     liveUrl: '', adminUrl: '', githubUrl: '', vercelUrl: '', firebaseRoot: '', notes: ''
@@ -68,6 +74,26 @@ export default function ProjectsPage() {
     setAlertFormData({ alertType: 'Website Down', severity: 'High', message: '' })
     
     await storageAdapter.saveAlert(newAlert, newAlerts)
+  }
+
+  const handleUpdateHealthSave = async (e) => {
+    e.preventDefault()
+    if (!healthProject) return
+    
+    const updatedProject = {
+      ...healthProject,
+      healthStatus: healthFormData.healthStatus,
+      healthScore: parseInt(healthFormData.healthScore, 10),
+      issueSummary: healthFormData.issueSummary,
+      uptimeNote: healthFormData.uptimeNote,
+      lastCheckedAt: new Date().toISOString()
+    }
+
+    const newProjects = projects.map(p => p.id === updatedProject.id ? updatedProject : p)
+    setProjects(newProjects)
+    setHealthProject(null)
+    
+    await storageAdapter.saveProject(updatedProject, newProjects)
   }
 
   const filters = ['All', 'Live', 'Development', 'Maintenance', 'Warning', 'Error', 'Paused', 'Planning', 'Building']
@@ -291,7 +317,23 @@ export default function ProjectsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ProjectCard project={p} onEdit={handleEdit} onDelete={handleDelete} onAddAlert={setAlertProject} alerts={alerts} tasks={tasks} />
+            <ProjectCard 
+              project={p} 
+              onEdit={handleEdit} 
+              onDelete={handleDelete} 
+              onAddAlert={setAlertProject} 
+              onUpdateHealth={(proj) => {
+                setHealthProject(proj)
+                setHealthFormData({
+                  healthStatus: proj.healthStatus || 'Healthy',
+                  healthScore: proj.healthScore ?? 100,
+                  issueSummary: proj.issueSummary || '',
+                  uptimeNote: proj.uptimeNote || ''
+                })
+              }}
+              alerts={alerts} 
+              tasks={tasks} 
+            />
           </motion.div>
         ))}
       </div>
@@ -345,6 +387,56 @@ export default function ProjectsPage() {
               <div className="pt-2 flex gap-3">
                 <button type="submit" className="flex-1 py-2 rounded-xl text-sm font-bold bg-status-warning/10 text-status-warning border border-status-warning/30 hover:bg-status-warning hover:text-obsidian-dark transition-all">
                   Create Alert
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Update Health Modal */}
+      {healthProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-dark/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md glass-card rounded-2xl p-6 border border-status-live/30 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Health Update: <span className="text-gold">{healthProject.name}</span></h3>
+              <button onClick={() => setHealthProject(null)} className="text-obsidian-muted hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateHealthSave} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Health Status</label>
+                <select value={healthFormData.healthStatus} onChange={e => setHealthFormData({...healthFormData, healthStatus: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-live/50 outline-none transition-colors">
+                  {['Healthy', 'Warning', 'Error', 'Unknown'].map(opt => (
+                    <option key={opt} value={opt} className="bg-obsidian-dark">{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Health Score (0-100)</label>
+                <input type="number" min="0" max="100" required value={healthFormData.healthScore} onChange={e => setHealthFormData({...healthFormData, healthScore: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-live/50 outline-none transition-colors" />
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Issue Summary (Optional)</label>
+                <input type="text" value={healthFormData.issueSummary} onChange={e => setHealthFormData({...healthFormData, issueSummary: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-live/50 outline-none transition-colors" placeholder="e.g., SSL expires in 2 days" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-obsidian-muted font-medium ml-1">Uptime / Notes</label>
+                <textarea value={healthFormData.uptimeNote} onChange={e => setHealthFormData({...healthFormData, uptimeNote: e.target.value})} className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl px-3 py-2 text-sm text-white focus:border-status-live/50 outline-none transition-colors h-24 resize-none" placeholder="Add manual health notes..."></textarea>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button type="submit" className="flex-1 py-2 rounded-xl text-sm font-bold bg-status-live/10 text-status-live border border-status-live/30 hover:bg-status-live hover:text-obsidian-dark transition-all">
+                  Save Health
                 </button>
               </div>
             </form>

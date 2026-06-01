@@ -1,4 +1,4 @@
-import { ExternalLink, Code, Globe, Shield, FileText, Database, Edit2, Trash2, AlertTriangle, PlusCircle } from 'lucide-react'
+import { ExternalLink, Code, Globe, Shield, FileText, Database, Edit2, Trash2, AlertTriangle, PlusCircle, Activity } from 'lucide-react'
 
 const statusColors = {
   Live: 'live',
@@ -11,7 +11,7 @@ const statusColors = {
   Building: 'building',
 }
 
-export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, alerts = [], tasks = [] }) {
+export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, onUpdateHealth, alerts = [], tasks = [] }) {
   const statusClass = statusColors[project.status] || 'offline'
   
   const projectAlerts = alerts.filter(a => a.projectId === project.id && a.status !== 'Fixed' && a.status !== 'Ignored')
@@ -21,6 +21,16 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
   const projectTasks = tasks.filter(t => t.projectId === project.id)
   const activeTasks = projectTasks.filter(t => t.status !== 'Done')
   const hasBlockedOrCriticalTask = activeTasks.some(t => t.status === 'Blocked' || t.priority === 'Critical')
+
+  let computedHealth = project.healthStatus || 'Unknown'
+  if (hasCritical) computedHealth = 'Error'
+  else if (projectAlerts.some(a => a.severity === 'High')) computedHealth = 'Warning'
+
+  const healthColor = 
+    computedHealth === 'Healthy' ? 'text-status-live bg-status-live/10 border-status-live/30' :
+    computedHealth === 'Warning' ? 'text-status-warning bg-status-warning/10 border-status-warning/30' :
+    computedHealth === 'Error' ? 'text-status-error bg-status-error/10 border-status-error/30 animate-pulse' :
+    'text-obsidian-muted bg-obsidian-light border-obsidian-border'
 
   return (
     <div className="glass-card-hover rounded-2xl p-5 flex flex-col h-full">
@@ -81,17 +91,35 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
       <div className="space-y-1.5 mb-4 flex-1">
         <p className="text-xs text-obsidian-muted leading-relaxed line-clamp-2">{project.notes}</p>
         
-        <div className="flex items-center gap-4 pt-2">
+        {project.issueSummary && (
+          <div className="mt-2 p-2 rounded-lg bg-status-error/5 border border-status-error/20">
+            <p className="text-[11px] text-status-error/90 font-medium">Issue: {project.issueSummary}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 pt-2 flex-wrap">
           <div className="flex items-center gap-1.5">
             <Globe className="w-3 h-3 text-obsidian-muted" />
-            <span className="text-[11px] text-obsidian-muted">{project.lastChecked || 'Not checked'}</span>
+            <span className="text-[11px] text-obsidian-muted">{project.lastCheckedAt ? new Date(project.lastCheckedAt).toLocaleString() : 'Not checked'}</span>
           </div>
+          {project.healthScore !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <Activity className="w-3 h-3 text-gold" />
+              <span className="text-[11px] text-gold">Score: {project.healthScore}/100</span>
+            </div>
+          )}
           {project.firebaseRoot && (
             <div className="flex items-center gap-1.5">
               <Database className="w-3 h-3 text-gold/70" />
               <span className="text-[11px] text-gold/70">{project.firebaseRoot}</span>
             </div>
           )}
+        </div>
+
+        <div className="mt-1 flex items-center gap-2">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${healthColor}`}>
+            Health: {computedHealth}
+          </span>
         </div>
 
         {project.tech && project.tech.length > 0 && (
@@ -156,7 +184,10 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, ale
           <ExternalLink className="w-3 h-3" /> Vercel
         </a>
         <button onClick={() => onAddAlert?.(project)} className="flex-1 min-w-[30%] flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-semibold bg-obsidian-card text-status-warning border border-obsidian-border hover:border-status-warning/50 hover:bg-status-warning/10 transition-all">
-          <PlusCircle className="w-3 h-3" /> Add Alert
+          <AlertTriangle className="w-3 h-3" /> Add Alert
+        </button>
+        <button onClick={() => onUpdateHealth?.(project)} className="flex-1 min-w-[30%] flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-semibold bg-obsidian-card text-status-live border border-obsidian-border hover:border-status-live/50 hover:bg-status-live/10 transition-all">
+          <Activity className="w-3 h-3" /> Health Update
         </button>
       </div>
     </div>
