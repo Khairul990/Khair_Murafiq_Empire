@@ -3,76 +3,54 @@
 This document describes the intended Firestore structure once the local-first application is migrated to Firebase.
 
 ## Standard Fields
-Every document in every collection MUST implement these standard fields:
-- `id` (String): Unique identifier (usually auto-generated or slugified name)
-- `ownerId` (String): Placeholder for the authenticated user ID (Firebase Auth UID)
+Every document in every collection MUST implement these standard fields for security and auditing:
+- `id` (String): Unique identifier
+- `ownerId` (String): Placeholder for the authenticated user email (`khairul2052007@gmail.com`) or UID.
 - `createdAt` (ISO String / Firestore Timestamp)
 - `updatedAt` (ISO String / Firestore Timestamp)
-- `source` (String): E.g., 'local' or 'firebase-ready'
+- `source` (String): Indicates data origin (e.g., 'local' or 'firebase')
 
 ## Collections
 
-### 1. `projects`
+### 1. `control_projects`
 Stores all websites and primary apps.
 - `name` (String)
 - `type` (String)
-- `status` (String: Development, Live, Maintenance, Warning, Error)
-- `liveUrl` (String)
-- `adminUrl` (String)
-- `repoUrl` (String)
-- `vercelUrl` (String)
-- `firebaseRoot` (String)
+- `status` (String)
+- `liveUrl`, `adminUrl`, `githubUrl`, `vercelUrl`, `firebaseRoot` (String)
 - `notes` (String)
 
-### 2. `alerts`
+### 2. `control_alerts`
 Stores system and manual alerts tied to projects.
-- `projectId` (String)
+- `websiteId` / `projectId` (String)
 - `projectName` (String)
 - `alertType` (String)
 - `severity` (String: Low, Medium, High, Critical)
-- `status` (String: New, Reviewing, Fixed, Ignored)
+- `status` (String: New, Seen, Fixed, Ignored)
 - `message` (String)
 
-### 3. `tasks`
+### 3. `control_tasks`
 Stores the Task Manager items.
+- `websiteId` / `projectId` (String)
+- `projectName` (String)
 - `title` (String)
 - `description` (String)
-- `projectId` (String)
-- `projectName` (String)
+- `assignedTo` (String)
 - `priority` (String: Low, Medium, High, Critical)
-- `status` (String: Pending, In Progress, Completed, Blocked)
+- `status` (String: Pending, Working, Review, Done)
 - `dueDate` (String)
 
-### 4. `finance`
-Stores income/expense records.
-- `type` (String: Income, Expense)
-- `amount` (Number)
-- `currency` (String)
-- `projectId` (String, optional)
-- `description` (String)
-- `date` (String)
-
-### 5. `goals`
-Stores long-term objectives.
-- `title` (String)
-- `targetDate` (String)
-- `progress` (Number)
-- `isCompleted` (Boolean)
-
-### 6. `socialPosts`
-Stores the Social Planner timeline.
-- `platform` (String: LinkedIn, Twitter, etc.)
-- `content` (String)
-- `scheduledFor` (String)
-- `status` (String: Draft, Scheduled, Published)
-
-### 7. `settings`
+### 4. `control_settings`
 Stores user preferences.
 - `ecoMode` (Boolean)
 - `language` (String)
-- `theme` (String)
 
-### 8. `activityLogs`
+### 5. `control_activity_logs`
 Stores system and manual actions.
 - `action` (String)
 - `details` (String)
+
+### 6. `control_reports`
+Stores analytical reports or finance snapshots.
+- `type` (String)
+- `data` (Object)

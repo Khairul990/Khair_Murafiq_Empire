@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut } from 'lucide-react'
+import { Settings, User, Bell, Globe, Zap, Database, Download, Upload, FileJson, AlertTriangle, LogOut, Server } from 'lucide-react'
 import { logActivity } from '../data/activity'
 import { auth } from '../services/firebase'
 import { signOut } from 'firebase/auth'
@@ -222,6 +222,56 @@ export default function SettingsPage() {
                 <AlertTriangle className="w-4 h-4 text-status-warning flex-shrink-0" />
                 <p className="text-[9px] text-obsidian-muted leading-tight">
                   Importing a backup will <strong className="text-status-warning">overwrite</strong> your current local data. A preview will be shown before confirmation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Firebase Status Panel */}
+        <div className="glass-card rounded-2xl p-5 lg:col-span-2 border border-blue-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Server className="w-5 h-5 text-blue-400" />
+            <h3 className="text-white font-bold text-sm">Firebase Configuration</h3>
+            <span className="px-2 py-0.5 rounded-full bg-status-dev/10 text-status-dev text-[10px] font-bold border border-status-dev/30 ml-2">
+              Ready for Connection
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Storage Mode</span>
+                <span className="font-bold text-status-dev">Local Browser Storage</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firebase Status</span>
+                <span className="font-bold text-obsidian-muted">Not Connected</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Owner Auth</span>
+                <span className="font-bold text-obsidian-muted">Pending</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Security Rules</span>
+                <span className="font-bold text-obsidian-muted">Pending</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-xs text-obsidian-muted font-semibold uppercase tracking-wider">Planned Collections</h4>
+              <div className="flex flex-wrap gap-2">
+                {['control_projects', 'control_tasks', 'control_alerts', 'control_settings', 'control_activity_logs'].map(col => (
+                  <span key={col} className="px-2 py-1 bg-obsidian-card border border-obsidian-border rounded text-[10px] text-white font-mono">
+                    {col}
+                  </span>
+                ))}
+              </div>
+              
+              <div className="bg-status-error/10 border border-status-error/30 rounded-xl p-3 flex gap-2 items-start mt-4">
+                <AlertTriangle className="w-4 h-4 text-status-error flex-shrink-0" />
+                <p className="text-[10px] text-status-error font-bold leading-tight">
+                  WARNING: Firebase private keys or service accounts must never be stored in frontend code or GitHub.
                 </p>
               </div>
             </div>
