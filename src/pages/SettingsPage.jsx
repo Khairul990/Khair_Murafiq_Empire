@@ -236,28 +236,28 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firebase SDK</span>
+                <span className="font-bold text-status-live">Installed</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firebase Config</span>
+                <span className="font-bold text-status-warning">Environment variables required</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Firestore</span>
+                <span className="font-bold text-blue-400">Ready but not active</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
+                <span className="text-obsidian-muted font-bold">Auth</span>
+                <span className="font-bold text-blue-400">Ready but not active</span>
+              </div>
+              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
                 <span className="text-obsidian-muted font-bold">Storage Mode</span>
-                <span className="font-bold text-status-dev">Local Browser Storage</span>
+                <span className="font-bold text-status-dev">Local</span>
               </div>
               <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Owner Login</span>
-                <span className="font-bold text-status-warning">Demo Local Mode</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Firebase Auth</span>
-                <span className="font-bold text-obsidian-muted">Pending</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Delete Protection</span>
-                <span className="font-bold text-status-live">Enabled</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Dangerous Actions</span>
-                <span className="font-bold text-blue-400">Owner Approval Required</span>
-              </div>
-              <div className="flex justify-between text-xs p-2.5 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                <span className="text-obsidian-muted font-bold">Secrets in Frontend</span>
-                <span className="font-bold text-status-live">Not Allowed</span>
+                <span className="text-obsidian-muted font-bold">Migration</span>
+                <span className="font-bold text-obsidian-muted">Not Started</span>
               </div>
             </div>
 

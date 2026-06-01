@@ -23,4 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .cnv.txt
-*.env*
+*.env
+*.env.*
+!.env.example
