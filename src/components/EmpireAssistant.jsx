@@ -80,8 +80,9 @@ export default function EmpireAssistant({ open, onToggle }) {
     setIsTyping(true)
 
     const cmd = userMsg.toLowerCase().trim()
+    const reportCommands = ['আজকের রিপোর্ট বলো', 'রিপোর্ট বলো', 'report', 'quick report', 'আজকের রিপোর্ট']
     
-    if (cmd === 'আজকের রিপোর্ট বলো' || cmd === 'report' || cmd === 'quick report') {
+    if (reportCommands.includes(cmd)) {
       const report = await generateReport()
       setMessages(prev => [...prev, { role: 'assistant', text: report }])
       setIsTyping(false)
@@ -140,17 +141,17 @@ export default function EmpireAssistant({ open, onToggle }) {
           </div>
 
           {/* Quick Actions */}
-          <div className="px-4 py-3 border-b border-gold/5 flex gap-2 overflow-x-auto empire-scrollbar">
+          <div className="px-4 py-3 border-b border-gold/5 flex flex-wrap gap-2">
             <button 
               onClick={() => handleSend(lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-gold hover:border-gold/30 whitespace-nowrap transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-gold hover:border-gold/30 transition-colors"
             >
               <FileText className="w-3.5 h-3.5" />
               {lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report'}
             </button>
             <button 
               onClick={() => alert('Voice mode coming later.')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white whitespace-nowrap transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
             >
               <Mic className="w-3.5 h-3.5" />
               {lang === 'bn' ? 'ভয়েস (Coming soon)' : 'Voice Mode'}
@@ -158,11 +159,11 @@ export default function EmpireAssistant({ open, onToggle }) {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line ${
+                  className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words ${
                     msg.role === 'user'
                       ? 'bg-gold/10 text-gold-light border border-gold/15 rounded-br-sm'
                       : 'bg-obsidian-card border border-obsidian-border text-obsidian-text rounded-bl-sm shadow-lg'
