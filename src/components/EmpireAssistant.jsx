@@ -29,6 +29,7 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [lastCheckedTime, setLastCheckedTime] = useState('Never')
   const [lastVoiceAlertTime, setLastVoiceAlertTime] = useState('None')
   const [firebaseError, setFirebaseError] = useState(false)
+  const [voiceStateMsg, setVoiceStateMsg] = useState('')
 
   const loadSettings = () => {
     try {
