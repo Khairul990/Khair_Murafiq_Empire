@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { Bot, X, Send, Sparkles, Mic, FileText, Command, Settings2 } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 import { getAssistantResponse } from '../data/assistantData'
@@ -440,7 +439,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     window.speechSynthesis.speak(utterance)
   }
 
-  return createPortal(
+  return (
     <>
       {/* Floating Button */}
       {!open && (
@@ -614,7 +613,6 @@ export default function EmpireAssistant({ open, onToggle }) {
           </div>
         </div>
       )}
-    </>,
-    document.body
+    </>
   )
 }
