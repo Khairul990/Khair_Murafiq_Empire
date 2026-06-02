@@ -307,7 +307,7 @@ export default function FinancePage() {
         {filtered.length === 0 ? (
           <div className="text-center py-8">
             <DollarSign className="w-10 h-10 text-obsidian-muted/30 mx-auto mb-2" />
-            <p className="text-xs text-obsidian-muted">No entries found.</p>
+            <p className="text-xs text-obsidian-muted">No finance entries yet</p>
           </div>
         ) : (
           <div className="space-y-2">

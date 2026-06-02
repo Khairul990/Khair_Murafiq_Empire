@@ -25,8 +25,9 @@ export default function WhatsAppPage() {
     >
       {/* Header */}
       <div>
-        <h1 className="text-xl lg:text-2xl font-extrabold text-white">
+        <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
           WhatsApp <span className="gold-gradient-text">Alert Center</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-obsidian-light/80 text-obsidian-muted border border-obsidian-border">Planned / Mock Mode</span>
         </h1>
         <p className="text-xs text-obsidian-muted mt-1">
           Monitor and manage WhatsApp alert notifications
@@ -45,7 +46,7 @@ export default function WhatsAppPage() {
             <div>
               <h3 className="text-white font-bold text-sm">Connection Status</h3>
               <p className="text-xs text-obsidian-muted">
-                {config.connected ? 'Connected' : 'Not Connected'}
+                {config.connected ? 'Connected' : 'Planned / Not Connected'}
               </p>
             </div>
           </div>

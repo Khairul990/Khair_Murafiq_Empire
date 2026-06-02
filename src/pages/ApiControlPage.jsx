@@ -66,6 +66,7 @@ export default function ApiControlPage() {
       <div>
         <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
           API Security <span className="gold-gradient-text">Engine</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-obsidian-light/80 text-obsidian-muted border border-obsidian-border">Planned / Mock Mode</span>
         </h1>
         <p className="text-xs text-obsidian-muted mt-1">
           High-security control center for all external services and API integrations

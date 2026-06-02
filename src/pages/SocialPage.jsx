@@ -364,7 +364,7 @@ export default function SocialPage() {
       {filtered.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Globe className="w-12 h-12 text-obsidian-muted/30 mx-auto mb-3" />
-          <p className="text-sm text-obsidian-muted">No social posts match your filters.</p>
+          <p className="text-sm text-obsidian-muted">No social posts yet</p>
         </div>
       )}
     </motion.div>

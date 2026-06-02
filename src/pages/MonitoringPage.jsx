@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Activity, Shield, Gauge, CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X, Loader2
+  Activity, Shield, Gauge, CheckCircle, XCircle, Clock, AlertTriangle, Camera, Trash2, Plus, X, Loader2, Info
 } from 'lucide-react'
-import monitoring from '../data/monitoring'
 import { auth } from '../services/firebaseConfig'
 import { storageAdapter } from '../services/storageAdapter'
 
@@ -90,6 +89,15 @@ export default function MonitoringPage() {
     await storageAdapter.saveAlert(newAlert, newAlerts)
   }
 
+  // Real data calculations
+  const projectsWithScore = projects.filter(p => p.healthScore !== undefined)
+  const averageHealth = projectsWithScore.length > 0 
+    ? Math.round(projectsWithScore.reduce((sum, p) => sum + p.healthScore, 0) / projectsWithScore.length)
+    : 100 // Fallback
+
+  const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+  const securityAlerts = activeAlerts.filter(a => a.alertType === 'Security Warning')
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -109,13 +117,23 @@ export default function MonitoringPage() {
         {errorMsg && <p className="text-[10px] text-status-error mt-1">{errorMsg}</p>}
       </div>
 
+      {/* Manual Warning Note */}
+      <div className="glass-card rounded-2xl p-4 border border-status-dev/30 bg-status-dev/5">
+        <div className="flex items-center gap-2">
+          <Info className="w-5 h-5 text-status-dev flex-shrink-0" />
+          <p className="text-sm font-semibold text-status-dev">
+            Real Data Active. <span className="font-normal text-obsidian-muted">Uptime auto-ping API is planned. The stats below are calculated from your real manual project scores and alerts.</span>
+          </p>
+        </div>
+      </div>
+
       {/* Status Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon: Activity, label: 'Uptime', value: monitoring.uptime, color: 'text-status-live' },
-          { icon: Shield, label: 'Deployment', value: monitoring.deploymentHealth, color: 'text-status-live' },
-          { icon: Shield, label: 'Security', value: monitoring.securityStatus, color: 'text-status-live' },
-          { icon: Gauge, label: 'Performance', value: `${monitoring.performanceScore}/100`, color: monitoring.performanceScore >= 80 ? 'text-status-live' : 'text-status-warning' },
+          { icon: Activity, label: 'Uptime (Planned API)', value: 'Mock / Safe Mode', color: 'text-obsidian-muted' },
+          { icon: Shield, label: 'Active Alerts', value: isLoading ? '-' : activeAlerts.length, color: activeAlerts.length > 0 ? 'text-status-warning' : 'text-status-live' },
+          { icon: Shield, label: 'Security Alerts', value: isLoading ? '-' : securityAlerts.length, color: securityAlerts.length > 0 ? 'text-status-error' : 'text-status-live' },
+          { icon: Gauge, label: 'Average Score', value: isLoading ? '-' : `${averageHealth}/100`, color: averageHealth >= 80 ? 'text-status-live' : 'text-status-warning' },
         ].map((item, i) => (
           <motion.div
             key={i}
@@ -216,7 +234,7 @@ export default function MonitoringPage() {
           </div>
         </div>
 
-        {alerts.length === 0 ? (
+        {alerts.length === 0 && !isLoading ? (
           <div className="text-center py-8 bg-obsidian-dark/50 rounded-xl border border-obsidian-border">
             <CheckCircle className="w-10 h-10 text-status-live/50 mx-auto mb-2" />
             <p className="text-xs font-bold text-white">All systems secure</p>
