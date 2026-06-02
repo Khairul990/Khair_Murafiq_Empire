@@ -225,17 +225,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const getRiskExplanation = (risk) => {
-    if (risk === 'Need Review') {
-       return `বর্তমান অবস্থা: Need Review.\nকারণ: কিছু alert/task pending আছে অথবা website health check দরকার।\nপ্রথমে Website Control পেজে Known Issue দেখুন।\nতারপর Alert Center / Task Manager / Website Agent check করুন।`
-    }
-    if (risk === 'Safe') return `বর্তমান অবস্থা: Safe.\nসব শান্ত ও সুরক্ষিত আছে, আলহামদুলিল্লাহ।`
-    if (risk === 'Warning') return `বর্তমান অবস্থা: Warning.\nকারণ: কোনো non-critical error বা pending task জমে আছে।`
-    if (risk === 'Critical') return `বর্তমান অবস্থা: Critical.\nকারণ: সিস্টেমে High/Critical alert রয়েছে। খুব দ্রুত Alert Center চেক করুন।`
-    return `বর্তমান অবস্থা: ${risk}`
-  }
-
-  const generateReport = async () => {
+  const buildSafeAssistantReply = async (type) => {
     try {
       const [projects, tasks, alerts, reports, events] = await Promise.all([
         storageAdapter.getProjects(),
@@ -248,142 +238,112 @@ export default function EmpireAssistant({ open, onToggle }) {
       const pTasks = tasks || []
       const pAlerts = alerts || []
       const pProjects = projects || []
-      const pEvents = events || []
 
       const pendingTasks = pTasks.filter(t => t.status !== 'Done')
       const activeAlerts = pAlerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
-      const criticalEvents = pEvents.filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
-      
-      const warningProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown')
-      const healthyProjects = pProjects.filter(p => p.healthStatus === 'Healthy')
+      const cAlerts = pAlerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored')
+      const wProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown')
 
-      let priorities = []
-      if (activeAlerts.length > 0) priorities.push('• Fix active alerts first')
-      if (pendingTasks.length > 0) priorities.push('• Complete overdue/pending tasks')
-      if (warningProjects.length > 0) priorities.push('• Update Unknown/Error website health')
-      priorities.push('• Take backup before risky work')
-      priorities.push('• Do not touch API secrets')
-      priorities = priorities.slice(0, 3)
+      if (type === 'daily_report') {
+        let text = `আসসালামু আলাইকুম বস।\nআজকের Control Room রিপোর্ট:\n\n`
+        text += `১. সামগ্রিক অবস্থা:\n`
+        text += `বর্তমান status: ${systemRisk}\n`
+        if (systemRisk === 'Need Review') {
+          text += `ব্যাখ্যা: কিছু alert/task/website health review দরকার।\n\n`
+        } else {
+          text += `ব্যাখ্যা: আলহামদুলিল্লাহ, সবকিছু ঠিক আছে।\n\n`
+        }
 
-      let bnText = `আসসালামু আলাইকুম বস।\n\n`
-      bnText += `${getRiskExplanation(systemRisk)}\n\n`
-      
-      if (pProjects.length === 0) {
-          bnText += `🌐 Website Health Summary:\nএই data এখনো পাওয়া যায়নি।\n\n`
-      } else {
-          bnText += `🌐 Website Health Summary:\n`
-          bnText += `Total Websites: ${pProjects.length}\nHealthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
+        text += `২. Website:\n`
+        text += `মোট website: ${pProjects.length > 0 ? pProjects.length : 'data পাওয়া যায়নি'}\n\n`
+
+        text += `৩. Alert:\n`
+        text += `Active alert: ${pAlerts.length > 0 ? activeAlerts.length : 'data পাওয়া যায়নি বা ০টি'}\n\n`
+
+        text += `৪. Task:\n`
+        text += `Pending task: ${pTasks.length > 0 ? pendingTasks.length : 'data পাওয়া যায়নি বা ০টি'}\n\n`
+
+        text += `৫. Next Safe Action:\n`
+        text += `প্রথমে Website Control দেখুন।\n`
+        text += `তারপর Website Agent check করুন।\n`
+        text += `তারপর Task Manager / Alert Center update করুন।\n\n`
+
+        text += `৬. Security Reminder:\n`
+        text += `API key, token, password frontend বা GitHub-এ দেবেন না।\n`
+        text += `Backup ছাড়া delete/migration করবেন না।`
+
+        return text
       }
 
-      if (pAlerts.length === 0) {
-        bnText += `🚨 Active Alerts:\nএই data এখনো পাওয়া যায়নি বা কোনো alert নেই।\n\n`
-      } else {
-        bnText += `🚨 Active Alerts: ${activeAlerts.length}টি আছে।\n\n`
+      if (type === 'task_list') {
+        let text = `বস, আপনার কাজের তালিকা:\n\n`
+        if (pTasks.length === 0 || pendingTasks.length === 0) {
+          text += `কোনো pending task পাওয়া যায়নি।\n`
+        } else {
+          pendingTasks.slice(0, 5).forEach(t => {
+            text += `• [${t.priority}] ${t.title}\n`
+          })
+          text += `\n`
+        }
+        return text.trim()
       }
 
-      if (pEvents.length === 0) {
-        bnText += `⚠️ Agent Events:\nএই data এখনো পাওয়া যায়নি।\n\n`
-      } else {
-        bnText += `⚠️ Recent Agent Events: ${criticalEvents.length}টি High/Critical event।\n\n`
+      if (type === 'voice_report') {
+        let voiceTxt = `আসসালামু আলাইকুম বস। `
+        if (systemRisk === 'Need Review') {
+           voiceTxt += `বর্তমান অবস্থা Need Review। কারণ কিছু অ্যালার্ট বা কাজ বাকি আছে। `
+        } else {
+           voiceTxt += `বর্তমান অবস্থা ${systemRisk}। `
+        }
+        voiceTxt += `আপনার ${cAlerts.length}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks.length}টি কাজ বাকি আছে, এবং ${wProjects.length}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+        return voiceTxt
       }
 
-      if (pTasks.length === 0) {
-        bnText += `📋 Pending Tasks:\nএই data এখনো পাওয়া যায়নি বা কোনো কাজ নেই।\n\n`
-      } else {
-        bnText += `📋 Pending Tasks: ${pendingTasks.length}টি\n\n`
+      if (type === 'security_check') {
+        let text = `নিরাপত্তা চেক:\n\n`
+        text += `• No frontend API keys\n`
+        text += `• API gateway planned/safe\n`
+        text += `• Firebase owner-only active\n`
+        text += `• Backup reminder: Take backup before risky operations`
+        return text
       }
 
-      bnText += `🎯 Top 3 Next Safe Actions:\n`
-      priorities.forEach(p => bnText += `${p}\n`)
-      bnText += `\n`
-
-      return bnText.trim()
     } catch (err) {
-      return 'Firebase unavailable. Local fallback active.'
-    }
-  }
-
-  const generateTaskReport = async () => {
-    try {
-      const [tasks, alerts] = await Promise.all([
-        storageAdapter.getTasks(),
-        storageAdapter.getAlerts()
-      ])
-      
-      const pTasks = tasks || []
-      const pAlerts = alerts || []
-      
-      const pendingTasks = pTasks.filter(t => t.status !== 'Done')
-      const activeAlerts = pAlerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
-      const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
-      
-      let text = `বস, আপনার কাজের তালিকা:\n\n`
-      text += `${getRiskExplanation(systemRisk)}\n\n`
-      
-      if (activeAlerts.length > 0) {
-        text += `🚨 Alerts: ${activeAlerts.length}টি alert আছে। যদি alert থাকে, তবে আগে alert চেক করুন।\n\n`
-      }
-      
-      if (pTasks.length === 0 || pendingTasks.length === 0) {
-         text += `✅ কোনো pending task পাওয়া যায়নি।\n\n`
-      } else {
-         text += `📋 Pending Tasks:\n`
-         pendingTasks.slice(0, 5).forEach(t => {
-           text += `• [${t.priority}] ${t.title}\n`
-         })
-         text += `\n`
-      }
-      
-      text += `🎯 Next Safe Action:\n`
-      if (criticalAlerts.length > 0) text += `Alert Center এ গিয়ে critical alerts resolve করুন।\n`
-      else if (pendingTasks.length > 0) text += `Urgent task গুলো শেষ করুন।\n`
-      else text += `নতুন update এর আগে Backup নিয়ে নিন।\n`
-      
-      return text.trim()
-    } catch {
       return 'Data unavailable. Local fallback active.'
     }
+    
+    // fallback
+    return `আমি ঠিক বুঝতে পারিনি। আপনি ‘আজকের রিপোর্ট’, ‘কাজের তালিকা’, ‘ভয়েস রিপোর্ট’, অথবা ‘নিরাপত্তা চেক’ চাপুন।`
   }
 
-  const generateVoiceReport = async () => {
-    try {
-       const [tasks, alerts, projects] = await Promise.all([
-         storageAdapter.getTasks(),
-         storageAdapter.getAlerts(),
-         storageAdapter.getProjects()
-       ])
-       const pTasks = tasks || []
-       const pAlerts = alerts || []
-       const pProjects = projects || []
-       
-       const pendingTasks = pTasks.filter(t => t.status !== 'Done').length
-       const cAlerts = pAlerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored').length
-       const wProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown').length
-       
-       let voiceTxt = `আসসালামু আলাইকুম বস। `
-       if (systemRisk === 'Need Review') {
-          voiceTxt += `বর্তমান অবস্থা Need Review। কারণ কিছু অ্যালার্ট বা কাজ বাকি আছে। `
-       } else {
-          voiceTxt += `বর্তমান অবস্থা ${systemRisk}। `
-       }
-       voiceTxt += `আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
-       
-       return voiceTxt
-    } catch {
-       return 'দুঃখিত, ডাটা পাওয়া যায়নি।'
+  const handleSend = async (customType = null, customText = null) => {
+    // If we pass a direct type (e.g. from quick chips)
+    if (customType) {
+      const displayMsg = customText || customType
+      setMessages(prev => [...prev, { role: 'user', text: displayMsg }])
+      setInput('')
+      setIsTyping(true)
+      
+      const report = await buildSafeAssistantReply(customType)
+      
+      if (customType === 'voice_report' && settings.voiceOutput && !settings.quietMode) {
+        speakAlert(report)
+      }
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: report }])
+      addAuditLog(`${customType}_generated`, 'success', 'assistant', `Generated ${customType}`)
+      setIsTyping(false)
+      return
     }
-  }
 
-  const handleSend = async (customText = null) => {
-    const userMsg = customText || input.trim()
+    const userMsg = input.trim()
     if (!userMsg) return
 
     setMessages(prev => [...prev, { role: 'user', text: userMsg }])
-    if (!customText) setInput('')
+    setInput('')
     setIsTyping(true)
 
     const cmd = userMsg.toLowerCase().trim()
-    
     const isMatch = (arr, c) => arr.some(keyword => c.includes(keyword))
 
     const dailyReportKeywords = ['আজকের রিপোর্ট', 'আজকে কি খবর', 'আজকের খবর কি', 'আজকের অবস্থা', 'আজ কী অবস্থা', 'system report', 'daily report', 'quick report']
@@ -391,59 +351,20 @@ export default function EmpireAssistant({ open, onToggle }) {
     const securityKeywords = ['security check', 'নিরাপত্তা চেক', 'সিকিউরিটি চেক', 'api safe আছে', 'secret আছে কিনা']
     const voiceKeywords = ['short voice report', 'ছোট রিপোর্ট বলো', 'ভয়েস রিপোর্ট', 'শুনিয়ে বলো']
 
-    if (isMatch(dailyReportKeywords, cmd)) {
-      const report = await generateReport()
-      setMessages(prev => [...prev, { role: 'assistant', text: report }])
-      addAuditLog('quick_report_generated', 'success', 'assistant', 'Generated quick report')
-      setIsTyping(false)
-      return
+    let replyType = 'fallback'
+    if (isMatch(dailyReportKeywords, cmd)) replyType = 'daily_report'
+    else if (isMatch(taskKeywords, cmd)) replyType = 'task_list'
+    else if (isMatch(securityKeywords, cmd)) replyType = 'security_check'
+    else if (isMatch(voiceKeywords, cmd)) replyType = 'voice_report'
+
+    const report = await buildSafeAssistantReply(replyType)
+    
+    if (replyType === 'voice_report' && settings.voiceOutput && !settings.quietMode) {
+      speakAlert(report)
     }
 
-    if (isMatch(taskKeywords, cmd)) {
-      const report = await generateTaskReport()
-      setMessages(prev => [...prev, { role: 'assistant', text: report }])
-      addAuditLog('task_report_generated', 'success', 'assistant', 'Generated task report')
-      setIsTyping(false)
-      return
-    }
-
-    if (isMatch(securityKeywords, cmd)) {
-      const txt = 'Security Check Report:\n• API keys frontend blocked: Yes\n• Firebase owner-only status: Active\n• API real status: Planned / Not Connected\n• Backup reminder: Take backup before risky changes\n• No secrets warning: All external APIs are mocked in Safe Mode.'
-      setMessages(prev => [...prev, { role: 'assistant', text: txt }])
-      addAuditLog('security_check_requested', 'success', 'assistant', 'Security check completed')
-      setIsTyping(false)
-      return
-    }
-
-    if (isMatch(voiceKeywords, cmd)) {
-      const report = await generateVoiceReport()
-      setMessages(prev => [...prev, { role: 'assistant', text: report }])
-      addAuditLog('voice_report_generated', 'success', 'assistant', 'Generated short voice report')
-      if (settings.voiceOutput && !settings.quietMode) {
-          speakAlert(report)
-      }
-      setIsTyping(false)
-      return
-    }
-
-    // Default static fallback for other commands
     setTimeout(() => {
-      const response = getAssistantResponse(userMsg)
-      let resText = typeof response === 'object' ? (response.bn || response.en) : response || ''
-      
-      const vagueWords = ['Need Review', 'Safe', 'Warning', 'Critical', 'ওয়েবসাইটে সমস্যা থাকতে পারে']
-      
-      let finalTxt = resText
-      
-      if (vagueWords.includes(resText.trim())) {
-         finalTxt = getRiskExplanation(resText.trim())
-      } else {
-         // Fallback for unclear message
-         finalTxt = `আমি ঠিক বুঝতে পারিনি। আপনি চাইলে ‘আজকের রিপোর্ট’, ‘কাজের তালিকা’, অথবা ‘নিরাপত্তা চেক’ লিখতে পারেন।`
-      }
-      
-      setMessages(prev => [...prev, { role: 'assistant', text: finalTxt }])
-      
+      setMessages(prev => [...prev, { role: 'assistant', text: report }])
       setIsTyping(false)
     }, 400)
   }
@@ -530,25 +451,25 @@ export default function EmpireAssistant({ open, onToggle }) {
           {/* Clean Quick Chips */}
           <div className="shrink-0 px-4 py-3 flex flex-wrap gap-2 bg-obsidian-dark/40 shadow-inner justify-center">
             <button 
-              onClick={() => handleSend('আজকের রিপোর্ট')}
+              onClick={() => handleSend('daily_report', 'আজকের রিপোর্ট')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-gold/20 text-xs text-gold hover:bg-gold/10 transition-colors"
             >
               আজকের রিপোর্ট
             </button>
             <button 
-              onClick={() => handleSend('আজকের কি কাজ আছে')}
+              onClick={() => handleSend('task_list', 'কাজের তালিকা')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-blue-500/20 text-xs text-blue-400 hover:bg-blue-500/10 transition-colors"
             >
               কাজের তালিকা
             </button>
             <button 
-              onClick={() => handleSend('ছোট রিপোর্ট বলো')}
+              onClick={() => handleSend('voice_report', 'ভয়েস রিপোর্ট')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-status-live/20 text-xs text-status-live hover:bg-status-live/10 transition-colors"
             >
               ভয়েস রিপোর্ট
             </button>
             <button 
-              onClick={() => handleSend('নিরাপত্তা চেক')}
+              onClick={() => handleSend('security_check', 'নিরাপত্তা চেক')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
             >
               নিরাপত্তা চেক
