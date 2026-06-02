@@ -235,76 +235,59 @@ export default function EmpireAssistant({ open, onToggle }) {
         storageAdapter.getWebsiteEvents()
       ])
 
-      const pendingTasks = tasks.filter(t => t.status !== 'Done')
-      const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
-      const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
-      const criticalEvents = (events || []).filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
+      const pTasks = tasks || []
+      const pAlerts = alerts || []
+      const pProjects = projects || []
+      const pEvents = events || []
+
+      const pendingTasks = pTasks.filter(t => t.status !== 'Done')
+      const activeAlerts = pAlerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+      const criticalEvents = pEvents.filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
       
-      const warningProjects = projects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown')
-      const healthyProjects = projects.filter(p => p.healthStatus === 'Healthy')
+      const warningProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown')
+      const healthyProjects = pProjects.filter(p => p.healthStatus === 'Healthy')
 
       let priorities = []
-      if (criticalAlerts.length > 0) priorities.push('• Fix Critical/High alerts first')
-      if (pendingTasks.length > 0) priorities.push('• Complete overdue/high priority tasks')
+      if (activeAlerts.length > 0) priorities.push('• Fix active alerts first')
+      if (pendingTasks.length > 0) priorities.push('• Complete overdue/pending tasks')
       if (warningProjects.length > 0) priorities.push('• Update Unknown/Error website health')
       priorities.push('• Take backup before risky work')
       priorities.push('• Do not touch API secrets')
       priorities = priorities.slice(0, 3)
 
-      const currentMonth = new Date().toISOString().slice(0, 7)
-      const thisMonthIncome = (reports || [])
-        .filter(r => (r.docType === 'finance_entry' || r.amount !== undefined) && r.type === 'income' && (r.date || '').startsWith(currentMonth))
-        .reduce((sum, r) => sum + Number(r.amount), 0)
-        
-      const plannedSocialPosts = (reports || [])
-        .filter(r => r.docType === 'social_post' || (r.platform && r.caption))
-        .length
-
       let bnText = `আসসালামু আলাইকুম বস।\n\n`
-      bnText += `📊 বর্তমান অবস্থা: ${systemRisk}${systemRisk === 'Need Review' ? ' (কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে)' : ''}\n\n`
+      bnText += `📊 Overall Status: ${systemRisk}\n\n`
       
-      if (projects.length === 0) {
-          bnText += `🌐 Projects: কোনো data পাওয়া যায়নি।\n`
+      if (pProjects.length === 0) {
+          bnText += `🌐 Website Health Summary:\nএই data এখনো পাওয়া যায়নি।\n\n`
       } else {
           bnText += `🌐 Website Health Summary:\n`
-          bnText += `Healthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
+          bnText += `Total Websites: ${pProjects.length}\nHealthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
       }
 
-      if (criticalAlerts.length > 0) {
-        bnText += `🚨 Critical/High Alerts: ${criticalAlerts.length}টি আছে। দয়া করে Alert Center দেখুন।\n\n`
+      if (pAlerts.length === 0) {
+        bnText += `🚨 Active Alerts:\nএই data এখনো পাওয়া যায়নি বা কোনো alert নেই।\n\n`
       } else {
-        bnText += `✅ কোনো Critical/High অ্যালার্ট নেই।\n\n`
+        bnText += `🚨 Active Alerts: ${activeAlerts.length}টি আছে।\n\n`
       }
 
-      if (criticalEvents.length > 0) {
-        bnText += `⚠️ Recent Agent Critical Events: ${criticalEvents.length}টি। Website Agent পেজ চেক করুন।\n\n`
+      if (pEvents.length === 0) {
+        bnText += `⚠️ Agent Events:\nএই data এখনো পাওয়া যায়নি।\n\n`
+      } else {
+        bnText += `⚠️ Recent Agent Events: ${criticalEvents.length}টি High/Critical event।\n\n`
       }
 
-      if (pendingTasks.length > 0) {
+      if (pTasks.length === 0) {
+        bnText += `📋 Pending Tasks:\nএই data এখনো পাওয়া যায়নি বা কোনো কাজ নেই।\n\n`
+      } else {
         bnText += `📋 Pending Tasks: ${pendingTasks.length}টি\n\n`
       }
 
-      if (plannedSocialPosts > 0 || thisMonthIncome > 0) {
-        bnText += `💼 Social/Finance Summary:\n`
-        bnText += `এই মাসের আয়: $${thisMonthIncome.toFixed(2)}, সোশ্যাল পোস্ট: ${plannedSocialPosts}টি\n\n`
-      }
-
-      bnText += `🎯 Top Recommended Actions:\n`
-      if (priorities.length > 0) {
-         priorities.forEach(p => bnText += `${p}\n`)
-      } else {
-         bnText += `• কোনো urgent কাজ নেই।\n`
-      }
+      bnText += `🎯 Top 3 Next Safe Actions:\n`
+      priorities.forEach(p => bnText += `${p}\n`)
       bnText += `\n`
 
-      bnText += `🛑 Safe Action Rules (Reminder):\n`
-      bnText += `• No API key/token/password in frontend/GitHub\n`
-      bnText += `• Backup before delete/migration\n`
-      bnText += `• Mock features should be clearly called mock/manual\n\n`
-
-      bnText += `✨ আল্লাহ ভরসা, ধীরে ধীরে নিরাপদভাবে এগোবো।`
-
-      return bnText
+      return bnText.trim()
     } catch (err) {
       return 'Firebase unavailable. Local fallback active.'
     }
@@ -317,35 +300,35 @@ export default function EmpireAssistant({ open, onToggle }) {
         storageAdapter.getAlerts()
       ])
       
-      const pendingTasks = tasks.filter(t => t.status !== 'Done')
-      const urgentTasks = pendingTasks.filter(t => t.priority === 'Critical' || t.priority === 'High')
-      const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+      const pTasks = tasks || []
+      const pAlerts = alerts || []
+      
+      const pendingTasks = pTasks.filter(t => t.status !== 'Done')
+      const activeAlerts = pAlerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
       
       let text = `বস, আপনার কাজের তালিকা:\n\n`
-      text += `📊 বর্তমান অবস্থা: ${systemRisk}${systemRisk === 'Need Review' ? ' (কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে)' : ''}\n\n`
       
-      if (criticalAlerts.length > 0) {
-        text += `🚨 Urgent Alerts: ${criticalAlerts.length}টি। আগে এগুলো ফিক্স করুন।\n\n`
+      if (activeAlerts.length > 0) {
+        text += `🚨 Alerts: ${activeAlerts.length}টি alert আছে। যদি alert থাকে, তবে আগে alert চেক করুন।\n\n`
       }
       
-      if (pendingTasks.length > 0) {
-         text += `📋 Top Pending Tasks:\n`
-         pendingTasks.slice(0, 3).forEach(t => {
+      if (pTasks.length === 0 || pendingTasks.length === 0) {
+         text += `✅ কোনো pending task পাওয়া যায়নি।\n\n`
+      } else {
+         text += `📋 Pending Tasks:\n`
+         pendingTasks.slice(0, 5).forEach(t => {
            text += `• [${t.priority}] ${t.title}\n`
          })
-         if (pendingTasks.length > 3) text += `+ আরও ${pendingTasks.length - 3}টি কাজ বাকি আছে।\n`
          text += `\n`
-      } else {
-         text += `✅ কোনো কাজ বাকি নেই!\n\n`
       }
       
-      text += `🎯 Next Safe Actions:\n`
-      if (criticalAlerts.length > 0) text += `১. Alert Center এ গিয়ে critical alerts resolve করুন।\n`
-      if (urgentTasks.length > 0) text += `২. Urgent task গুলো শেষ করুন।\n`
-      text += `${criticalAlerts.length > 0 || urgentTasks.length > 0 ? '৩' : '১'}. নতুন update এর আগে Backup নিয়ে নিন।\n`
+      text += `🎯 Next Safe Action:\n`
+      if (criticalAlerts.length > 0) text += `Alert Center এ গিয়ে critical alerts resolve করুন।\n`
+      else if (pendingTasks.length > 0) text += `Urgent task গুলো শেষ করুন।\n`
+      else text += `নতুন update এর আগে Backup নিয়ে নিন।\n`
       
-      return text
+      return text.trim()
     } catch {
       return 'Data unavailable. Local fallback active.'
     }
@@ -358,11 +341,15 @@ export default function EmpireAssistant({ open, onToggle }) {
          storageAdapter.getAlerts(),
          storageAdapter.getProjects()
        ])
-       const pTasks = tasks.filter(t => t.status !== 'Done').length
-       const cAlerts = alerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored').length
-       const wProjects = projects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown').length
+       const pTasks = tasks || []
+       const pAlerts = alerts || []
+       const pProjects = projects || []
        
-       return `আসসালামু আলাইকুম বস। বর্তমান অবস্থা ${systemRisk}। আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+       const pendingTasks = pTasks.filter(t => t.status !== 'Done').length
+       const cAlerts = pAlerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored').length
+       const wProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown').length
+       
+       return `আসসালামু আলাইকুম বস। বর্তমান অবস্থা ${systemRisk}। আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
     } catch {
        return 'দুঃখিত, ডাটা পাওয়া যায়নি।'
     }
@@ -402,7 +389,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
 
     if (isMatch(securityKeywords, cmd)) {
-      const txt = 'Security Check Report:\n• No API key/token/password in frontend/GitHub\n• Firebase Web SDK only uses public config\n• Firestore Rules block unauthorized writes\n• Local Storage is acting as fallback\n\nOverall: Safe Mode Active.'
+      const txt = 'Security Check Report:\n• API keys frontend blocked: Yes\n• Firebase owner-only status: Active\n• API real status: Planned / Not Connected\n• Backup reminder: Take backup before risky changes\n• No secrets warning: All external APIs are mocked in Safe Mode.'
       setMessages(prev => [...prev, { role: 'assistant', text: txt }])
       addAuditLog('security_check_requested', 'success', 'assistant', 'Security check completed')
       setIsTyping(false)
@@ -423,14 +410,30 @@ export default function EmpireAssistant({ open, onToggle }) {
     // Default static fallback for other commands
     setTimeout(() => {
       const response = getAssistantResponse(userMsg)
-      const resText = typeof response === 'object' ? (response.bn || response.en) : response
+      let resText = typeof response === 'object' ? (response.bn || response.en) : response || ''
       
-      // Never reply ONLY "Need Review", add context
-      if (resText === 'Need Review') {
-         setMessages(prev => [...prev, { role: 'assistant', text: `বর্তমান অবস্থা: Need Review. কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে।` }])
+      const vagueWords = ['Need Review', 'Safe', 'Warning', 'Critical', 'ওয়েবসাইটে সমস্যা থাকতে পারে']
+      
+      let finalTxt = resText
+      
+      if (vagueWords.includes(resText.trim())) {
+         if (resText.trim() === 'Need Review') {
+            finalTxt = `বর্তমান অবস্থা: Need Review.\nকারণ: কিছু alert/task pending আছে অথবা website health check দরকার।\nপ্রথমে Website Control পেজে Known Issue দেখুন, তারপর Alert Center/Task Manager check করুন।`
+         } else if (resText.trim() === 'Safe') {
+            finalTxt = `বর্তমান অবস্থা: Safe.\nসব শান্ত ও সুরক্ষিত আছে, আলহামদুলিল্লাহ।`
+         } else if (resText.trim() === 'Warning') {
+            finalTxt = `বর্তমান অবস্থা: Warning.\nকারণ: কোনো non-critical error বা pending task জমে আছে।`
+         } else if (resText.trim() === 'Critical') {
+            finalTxt = `বর্তমান অবস্থা: Critical.\nকারণ: সিস্টেমে High/Critical alert রয়েছে।`
+         } else {
+            finalTxt = `বর্তমান অবস্থা: ${resText.trim()}`
+         }
       } else {
-         setMessages(prev => [...prev, { role: 'assistant', text: resText }])
+         // Fallback for unclear message
+         finalTxt = `আমি ঠিক বুঝতে পারিনি। আপনি চাইলে ‘আজকের রিপোর্ট’, ‘কাজের তালিকা’, অথবা ‘নিরাপত্তা চেক’ লিখতে পারেন।`
       }
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: finalTxt }])
       
       setIsTyping(false)
     }, 400)
