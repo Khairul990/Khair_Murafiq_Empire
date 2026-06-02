@@ -261,7 +261,7 @@ export default function EmpireAssistant({ open, onToggle }) {
         .length
 
       let bnText = `আসসালামু আলাইকুম বস।\n\n`
-      bnText += `📊 Overall Status: ${systemRisk}\n\n`
+      bnText += `📊 বর্তমান অবস্থা: ${systemRisk}${systemRisk === 'Need Review' ? ' (কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে)' : ''}\n\n`
       
       if (projects.length === 0) {
           bnText += `🌐 Projects: কোনো data পাওয়া যায়নি।\n`
@@ -310,6 +310,64 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
   }
 
+  const generateTaskReport = async () => {
+    try {
+      const [tasks, alerts] = await Promise.all([
+        storageAdapter.getTasks(),
+        storageAdapter.getAlerts()
+      ])
+      
+      const pendingTasks = tasks.filter(t => t.status !== 'Done')
+      const urgentTasks = pendingTasks.filter(t => t.priority === 'Critical' || t.priority === 'High')
+      const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
+      const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
+      
+      let text = `বস, আপনার কাজের তালিকা:\n\n`
+      text += `📊 বর্তমান অবস্থা: ${systemRisk}${systemRisk === 'Need Review' ? ' (কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে)' : ''}\n\n`
+      
+      if (criticalAlerts.length > 0) {
+        text += `🚨 Urgent Alerts: ${criticalAlerts.length}টি। আগে এগুলো ফিক্স করুন।\n\n`
+      }
+      
+      if (pendingTasks.length > 0) {
+         text += `📋 Top Pending Tasks:\n`
+         pendingTasks.slice(0, 3).forEach(t => {
+           text += `• [${t.priority}] ${t.title}\n`
+         })
+         if (pendingTasks.length > 3) text += `+ আরও ${pendingTasks.length - 3}টি কাজ বাকি আছে।\n`
+         text += `\n`
+      } else {
+         text += `✅ কোনো কাজ বাকি নেই!\n\n`
+      }
+      
+      text += `🎯 Next Safe Actions:\n`
+      if (criticalAlerts.length > 0) text += `১. Alert Center এ গিয়ে critical alerts resolve করুন।\n`
+      if (urgentTasks.length > 0) text += `২. Urgent task গুলো শেষ করুন।\n`
+      text += `${criticalAlerts.length > 0 || urgentTasks.length > 0 ? '৩' : '১'}. নতুন update এর আগে Backup নিয়ে নিন।\n`
+      
+      return text
+    } catch {
+      return 'Data unavailable. Local fallback active.'
+    }
+  }
+
+  const generateVoiceReport = async () => {
+    try {
+       const [tasks, alerts, projects] = await Promise.all([
+         storageAdapter.getTasks(),
+         storageAdapter.getAlerts(),
+         storageAdapter.getProjects()
+       ])
+       const pTasks = tasks.filter(t => t.status !== 'Done').length
+       const cAlerts = alerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored').length
+       const wProjects = projects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown').length
+       
+       return `আসসালামু আলাইকুম বস। বর্তমান অবস্থা ${systemRisk}। আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+    } catch {
+       return 'দুঃখিত, ডাটা পাওয়া যায়নি।'
+    }
+  }
+
   const handleSend = async (customText = null) => {
     const userMsg = customText || input.trim()
     if (!userMsg) return
@@ -320,19 +378,30 @@ export default function EmpireAssistant({ open, onToggle }) {
 
     const cmd = userMsg.toLowerCase().trim()
     
-    if (cmd === 'আজকের রিপোর্ট') {
+    const isMatch = (arr, c) => arr.some(keyword => c.includes(keyword))
+
+    const dailyReportKeywords = ['আজকের রিপোর্ট', 'আজকে কি খবর', 'আজকের খবর কি', 'আজকের অবস্থা', 'আজ কী অবস্থা', 'system report', 'daily report', 'quick report']
+    const taskKeywords = ['আজকের কি কাজ আছে', 'আজকে কি কাজ আছে', 'কি কাজ বাকি আছে', 'pending task', 'next task', 'কাজ বলো', 'পরের কাজ বলো', 'এখন কি করব']
+    const securityKeywords = ['security check', 'নিরাপত্তা চেক', 'সিকিউরিটি চেক', 'api safe আছে', 'secret আছে কিনা']
+    const voiceKeywords = ['short voice report', 'ছোট রিপোর্ট বলো', 'ভয়েস রিপোর্ট', 'শুনিয়ে বলো']
+
+    if (isMatch(dailyReportKeywords, cmd)) {
       const report = await generateReport()
       setMessages(prev => [...prev, { role: 'assistant', text: report }])
       addAuditLog('quick_report_generated', 'success', 'assistant', 'Generated quick report')
-      if (settings.voiceOutput && !settings.quietMode) {
-          const textToSpeak = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। বিস্তারিত রিপোর্ট স্ক্রিনে দেওয়া হলো।`
-          speakAlert(textToSpeak)
-      }
       setIsTyping(false)
       return
     }
 
-    if (cmd === 'নিরাপত্তা চেক') {
+    if (isMatch(taskKeywords, cmd)) {
+      const report = await generateTaskReport()
+      setMessages(prev => [...prev, { role: 'assistant', text: report }])
+      addAuditLog('task_report_generated', 'success', 'assistant', 'Generated task report')
+      setIsTyping(false)
+      return
+    }
+
+    if (isMatch(securityKeywords, cmd)) {
       const txt = 'Security Check Report:\n• No API key/token/password in frontend/GitHub\n• Firebase Web SDK only uses public config\n• Firestore Rules block unauthorized writes\n• Local Storage is acting as fallback\n\nOverall: Safe Mode Active.'
       setMessages(prev => [...prev, { role: 'assistant', text: txt }])
       addAuditLog('security_check_requested', 'success', 'assistant', 'Security check completed')
@@ -340,10 +409,13 @@ export default function EmpireAssistant({ open, onToggle }) {
       return
     }
 
-    if (cmd === 'পরের কাজ') {
-      const txt = 'Recommended Next Safe Action:\n১. প্রথমে Alerts প্যানেল চেক করে Critical issue থাকলে ফিক্স করুন।\n২. Task list থেকে Urgent কাজ শেষ করুন।\n৩. নতুন কোনো update দেওয়ার আগে Data Export (Backup) করে নিন।'
-      setMessages(prev => [...prev, { role: 'assistant', text: txt }])
-      addAuditLog('next_action_requested', 'success', 'assistant', 'Provided next action recommendations')
+    if (isMatch(voiceKeywords, cmd)) {
+      const report = await generateVoiceReport()
+      setMessages(prev => [...prev, { role: 'assistant', text: report }])
+      addAuditLog('voice_report_generated', 'success', 'assistant', 'Generated short voice report')
+      if (settings.voiceOutput && !settings.quietMode) {
+          speakAlert(report)
+      }
       setIsTyping(false)
       return
     }
@@ -352,7 +424,14 @@ export default function EmpireAssistant({ open, onToggle }) {
     setTimeout(() => {
       const response = getAssistantResponse(userMsg)
       const resText = typeof response === 'object' ? (response.bn || response.en) : response
-      setMessages(prev => [...prev, { role: 'assistant', text: resText }])
+      
+      // Never reply ONLY "Need Review", add context
+      if (resText === 'Need Review') {
+         setMessages(prev => [...prev, { role: 'assistant', text: `বর্তমান অবস্থা: Need Review. কারণ: অনেক কাজ বা অ্যালার্ট পেন্ডিং আছে।` }])
+      } else {
+         setMessages(prev => [...prev, { role: 'assistant', text: resText }])
+      }
+      
       setIsTyping(false)
     }, 400)
   }
@@ -445,16 +524,22 @@ export default function EmpireAssistant({ open, onToggle }) {
               আজকের রিপোর্ট
             </button>
             <button 
+              onClick={() => handleSend('আজকের কি কাজ আছে')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-blue-500/20 text-xs text-blue-400 hover:bg-blue-500/10 transition-colors"
+            >
+              কাজের তালিকা
+            </button>
+            <button 
+              onClick={() => handleSend('ছোট রিপোর্ট বলো')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-status-live/20 text-xs text-status-live hover:bg-status-live/10 transition-colors"
+            >
+              ভয়েস রিপোর্ট
+            </button>
+            <button 
               onClick={() => handleSend('নিরাপত্তা চেক')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
             >
               নিরাপত্তা চেক
-            </button>
-            <button 
-              onClick={() => handleSend('পরের কাজ')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
-            >
-              পরের কাজ
             </button>
           </div>
 

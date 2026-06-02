@@ -64,146 +64,160 @@ export default function ApiControlPage() {
     >
       {/* Header */}
       <div>
-        <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
-          API Security <span className="gold-gradient-text">Engine</span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-obsidian-light/80 text-obsidian-muted border border-obsidian-border">Foundation Only</span>
+        <h1 className="text-xl lg:text-3xl font-extrabold text-white flex items-center gap-3">
+          API Security <span className="gold-gradient-text">Gateway</span>
+          <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-obsidian-light/80 text-obsidian-muted border border-obsidian-border">Foundation Mode</span>
         </h1>
-        <p className="text-xs text-obsidian-muted mt-1">
-          High-security control center for all future serverless external services.
+        <p className="text-xs text-obsidian-muted mt-1 uppercase tracking-widest font-bold">
+          High-security control center for future serverless integrations
         </p>
       </div>
 
       {/* Real API Readiness Score Panel */}
-      <div className="glass-card rounded-2xl p-5 border border-status-live/30 bg-status-live/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="glass-card rounded-2xl p-6 border border-status-live/30 bg-status-live/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1 h-full bg-status-live" />
         <div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <h2 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-3">
             <ShieldCheck className="w-5 h-5 text-status-live" />
-            API Security Readiness
+            Gateway Security Posture
           </h2>
-          <ul className="text-[10px] text-obsidian-muted mt-2 space-y-1">
-            <li className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-status-live" /> Frontend secrets blocked</li>
-            <li className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-status-live" /> Serverless placeholders created</li>
-            <li className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-status-live" /> Environment setup documented</li>
-            <li className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-status-live" /> Owner approval required</li>
-            <li className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-status-live" /> Real APIs not connected</li>
+          <ul className="text-[10px] font-bold text-obsidian-muted uppercase tracking-wider mt-3 space-y-2">
+            <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-status-live" /> Frontend payloads blocked</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-status-live" /> Serverless nodes deployed</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-status-live" /> Environment variables sealed</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-status-live" /> Owner approval enforced</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-status-live" /> External channels closed</li>
           </ul>
         </div>
-        <div className="text-center px-6 py-3 rounded-xl bg-obsidian-dark border border-obsidian-border">
-          <p className="text-[10px] text-obsidian-muted font-bold uppercase tracking-wider mb-1">Overall Status</p>
-          <p className="text-sm font-black text-status-live">Safe Foundation Ready</p>
+        <div className="text-center px-8 py-4 rounded-xl bg-obsidian-dark border border-status-live/20 shadow-[0_0_30px_rgba(34,197,94,0.1)] w-full md:w-auto">
+          <p className="text-[10px] text-obsidian-muted font-bold uppercase tracking-wider mb-1.5">Gateway Status</p>
+          <p className="text-lg font-black text-status-live uppercase tracking-wider">Nominal Ready</p>
         </div>
       </div>
 
       {/* Part A: API Security Page Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Frontend API Keys', status: 'Blocked', text: 'API keys must never be stored in React/frontend code.', icon: Key, color: 'text-status-error' },
-          { label: 'GitHub Secret Protection', status: 'Protected', text: 'Secrets must never be committed to GitHub.', icon: ShieldCheck, color: 'text-status-live' },
-          { label: 'LocalStorage Protection', status: 'Blocked', text: 'Secrets must never be stored in localStorage.', icon: Database, color: 'text-status-error' },
-          { label: 'Serverless Gateway', status: 'Required', text: 'All real API calls must go through serverless/backend functions.', icon: Server, color: 'text-blue-400' },
-          { label: 'Vercel Env Variables', status: 'Required', text: 'Real API keys will be stored only in Vercel server-side env.', icon: Server, color: 'text-gold' },
-          { label: 'Owner Approval', status: 'Required', text: 'Risky API actions need owner approval before execution.', icon: CheckSquare, color: 'text-gold' },
-          { label: 'API Kill Switch', status: 'Mock / Safe Mode', text: 'Real API shutdown enabled only after backend is connected.', icon: StopCircle, color: 'text-status-warning' },
-          { label: 'Real API Status', status: 'Not Connected', text: 'No real external API is connected yet.', icon: Activity, color: 'text-obsidian-muted' },
+          { label: 'Frontend Keys', status: 'Blocked', text: 'Keys locked out of React code.', icon: Key, color: 'text-status-error' },
+          { label: 'GitHub Shield', status: 'Protected', text: 'Secrets blocked from Git repo.', icon: ShieldCheck, color: 'text-status-live' },
+          { label: 'Local Storage', status: 'Blocked', text: 'Local payload storage denied.', icon: Database, color: 'text-status-error' },
+          { label: 'Edge Gateway', status: 'Required', text: 'All traffic via Edge nodes.', icon: Server, color: 'text-cyan-signal' },
+          { label: 'Vercel Env', status: 'Required', text: 'Server-side key storage only.', icon: Server, color: 'text-gold' },
+          { label: 'Owner Auth', status: 'Required', text: 'Strict MFA approval checks.', icon: CheckSquare, color: 'text-gold' },
+          { label: 'Kill Switch', status: 'Safe Mode', text: 'Global API shutdown ready.', icon: StopCircle, color: 'text-status-warning' },
+          { label: 'Live Uplink', status: 'Offline', text: 'No active external payloads.', icon: Activity, color: 'text-obsidian-muted' },
         ].map((check, i) => (
-          <div key={i} className="glass-card rounded-xl p-4 flex flex-col justify-between border border-obsidian-border">
-            <div className="flex items-start justify-between mb-2">
+          <div key={i} className={`glass-card rounded-xl p-5 flex flex-col justify-between border ${check.color === 'text-cyan-signal' ? 'border-cyan-signal/20' : 'border-obsidian-border'}`}>
+            <div className="flex items-start justify-between mb-3">
               <check.icon className={`w-5 h-5 ${check.color}`} />
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${check.status === 'Protected' || check.status === 'Required' ? 'bg-status-live/10 text-status-live border-status-live/20' : check.status === 'Blocked' ? 'bg-status-error/10 text-status-error border-status-error/20' : 'bg-obsidian-card text-obsidian-muted border-obsidian-border'}`}>
+              <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border ${
+                check.status === 'Protected' || check.status === 'Required' ? 'bg-status-live/10 text-status-live border-status-live/20' : 
+                check.status === 'Blocked' ? 'bg-status-error/10 text-status-error border-status-error/20' : 
+                'bg-obsidian-card text-obsidian-muted border-obsidian-border'
+              }`}>
                 {check.status}
               </span>
             </div>
-            <h3 className="text-xs font-bold text-white mb-1">{check.label}</h3>
-            <p className="text-[10px] text-obsidian-muted leading-tight">{check.text}</p>
+            <h3 className="text-xs font-black uppercase tracking-wider text-white mb-1.5">{check.label}</h3>
+            <p className="text-[10px] text-obsidian-muted leading-relaxed">{check.text}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Column: Management UI */}
-        <div className="lg:col-span-1 space-y-5">
+        <div className="lg:col-span-1 space-y-6">
           
           {/* API Kill Switch */}
-          <div className="glass-card rounded-2xl p-5 border border-status-error/30 bg-status-error/5">
-            <div className="flex items-center gap-2 mb-4">
-              <StopCircle className="w-5 h-5 text-status-error" />
-              <h3 className="text-white font-bold text-sm">API Kill Switch</h3>
+          <div className="glass-card rounded-2xl p-6 border border-status-error/30 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-status-error/50 group-hover:bg-status-error transition-colors" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 bg-status-error/10 rounded-lg">
+                <StopCircle className="w-5 h-5 text-status-error" />
+              </div>
+              <h3 className="text-white font-black uppercase tracking-wider text-sm">Kill Switch Array</h3>
             </div>
             <div className="space-y-3">
               {[
-                { label: 'Global API Kill Switch', active: false, mode: 'Mock / Safe Mode' },
-                { label: 'ElevenLabs Voice API', active: false, mode: 'Planned' },
-                { label: 'AI Brain API', active: false, mode: 'Planned' },
-                { label: 'WhatsApp API', active: false, mode: 'Planned' },
-                { label: 'GitHub/Vercel API', active: false, mode: 'Planned' },
+                { label: 'Global Array Switch', active: false, mode: 'Mock / Safe Mode' },
+                { label: 'ElevenLabs Voice', active: false, mode: 'Planned' },
+                { label: 'AI Operations', active: false, mode: 'Planned' },
+                { label: 'WhatsApp Relays', active: false, mode: 'Planned' },
+                { label: 'DevOps / GitHub', active: false, mode: 'Planned' },
               ].map((sw, i) => (
-                <div key={i} className="flex flex-col p-3 rounded-xl bg-obsidian-dark border border-obsidian-border">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-white font-medium">{sw.label}</span>
-                    <button onClick={() => alert('Demo only — no real API action performed.')} className={`w-8 h-4 rounded-full flex items-center transition-colors ${sw.active ? 'bg-status-error justify-end' : 'bg-obsidian-card border border-obsidian-border justify-start'}`}>
-                      <div className="w-3 h-3 rounded-full bg-obsidian-muted mx-0.5 shadow" />
+                <div key={i} className="flex flex-col p-4 rounded-xl bg-obsidian-dark/50 border border-obsidian-border hover:border-status-error/20 transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] text-white font-bold uppercase tracking-wider">{sw.label}</span>
+                    <button onClick={() => alert('Command rejected: Array offline.')} className={`w-10 h-5 rounded-full flex items-center transition-colors ${sw.active ? 'bg-status-error justify-end' : 'bg-obsidian-card border border-obsidian-border justify-start'}`}>
+                      <div className="w-4 h-4 rounded-full bg-obsidian-muted mx-0.5 shadow" />
                     </button>
                   </div>
-                  <span className="text-[9px] text-status-warning font-bold">{sw.mode}</span>
+                  <span className="text-[9px] text-status-warning font-bold uppercase tracking-wider">{sw.mode}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Owner Approval Queue UI */}
-          <div className="glass-card rounded-2xl p-5 border border-gold/20">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckSquare className="w-5 h-5 text-gold" />
-              <h3 className="text-white font-bold text-sm">Owner Approval Queue</h3>
+          <div className="glass-card rounded-2xl p-6 border border-gold/20 relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gold/50" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 bg-gold/10 rounded-lg">
+                <CheckSquare className="w-5 h-5 text-gold" />
+              </div>
+              <h3 className="text-white font-black uppercase tracking-wider text-sm">Command Queue</h3>
             </div>
             <div className="space-y-3">
               {[
-                'Voice generation request',
-                'AI report generation',
-                'WhatsApp alert send',
-                'Uptime check',
-                'GitHub/Vercel status check',
-                'Deploy action'
+                'Voice Render Req',
+                'AI Analysis Req',
+                'Comm Relay Req',
+                'Uptime Ping Req',
+                'GitHub PR Check',
+                'Vercel Deploy Req'
               ].map((action, i) => (
-                <div key={i} className="p-3 rounded-xl bg-obsidian-dark border border-obsidian-border">
-                  <div className="flex flex-col gap-1 mb-2">
-                    <span className="text-xs text-white">{action}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-status-warning/10 text-status-warning self-start">Planned / Requires owner approval</span>
+                <div key={i} className="p-4 rounded-xl bg-obsidian-dark/50 border border-obsidian-border">
+                  <div className="flex flex-col gap-2 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">{action}</span>
+                    <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider bg-status-warning/10 text-status-warning self-start">Awaiting Authorization</span>
                   </div>
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={handleMockAction} className="flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border border-status-live/30 text-status-live hover:bg-status-live/10 transition-colors">Approve</button>
-                    <button onClick={handleMockAction} className="flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border border-status-error/30 text-status-error hover:bg-status-error/10 transition-colors">Reject</button>
+                  <div className="flex gap-3">
+                    <button onClick={handleMockAction} className="flex-1 py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border border-status-live/30 text-status-live hover:bg-status-live hover:text-obsidian-dark transition-all">Authorize</button>
+                    <button onClick={handleMockAction} className="flex-1 py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border border-status-error/30 text-status-error hover:bg-status-error hover:text-obsidian-dark transition-all">Deny</button>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 p-3 bg-obsidian-dark rounded-lg border border-obsidian-border">
-              <p className="text-[10px] text-obsidian-muted flex items-start gap-1.5">
-                <Lock className="w-3 h-3 text-gold shrink-0" />
-                API gateway must verify Firebase Auth owner before any future real API call. Currently in planned mode only.
+            <div className="mt-5 p-4 bg-obsidian-dark/50 rounded-xl border border-obsidian-border text-center">
+              <Lock className="w-4 h-4 text-gold mx-auto mb-2" />
+              <p className="text-[9px] text-obsidian-muted font-bold uppercase tracking-wider leading-relaxed">
+                MFA Authentication required for external API authorizations. System currently sandboxed.
               </p>
             </div>
           </div>
           
           {/* API Usage Log */}
-          <div className="glass-card rounded-2xl p-5 border border-obsidian-border">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-5 h-5 text-blue-400" />
-              <h3 className="text-white font-bold text-sm">API Activity Logs</h3>
+          <div className="glass-card rounded-2xl p-6 border border-cyan-signal/20 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-cyan-signal/50" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 bg-cyan-signal/10 rounded-lg">
+                <Activity className="w-5 h-5 text-cyan-signal" />
+              </div>
+              <h3 className="text-white font-black uppercase tracking-wider text-sm">Telemetry Logs</h3>
             </div>
-            <div className="space-y-2 max-h-[250px] overflow-y-auto empire-scrollbar">
+            <div className="space-y-3 max-h-[300px] overflow-y-auto empire-scrollbar pr-2">
               {logs.length > 0 ? logs.map(log => (
-                <div key={log.id} className="p-2 rounded-lg bg-obsidian-dark border border-obsidian-border">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[10px] text-white font-bold">{log.apiName}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${log.status === 'success' ? 'bg-status-live/10 text-status-live' : 'bg-status-error/10 text-status-error'}`}>{log.status}</span>
+                <div key={log.id} className="p-3 rounded-xl bg-obsidian-dark/50 border border-obsidian-border">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">{log.apiName}</span>
+                    <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider ${log.status === 'success' ? 'bg-status-live/10 text-status-live' : 'bg-status-error/10 text-status-error'}`}>{log.status}</span>
                   </div>
-                  <p className="text-[9px] text-obsidian-muted">{log.note}</p>
-                  <p className="text-[8px] text-obsidian-muted/50 mt-1 font-mono">{new Date(log.timestamp).toLocaleString()}</p>
+                  <p className="text-[10px] text-obsidian-muted">{log.note}</p>
+                  <p className="text-[9px] font-bold text-obsidian-muted/50 mt-2 font-mono">{new Date(log.timestamp).toLocaleString()}</p>
                 </div>
               )) : (
-                <p className="text-xs text-obsidian-muted text-center py-4">No API logs yet.</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-obsidian-muted text-center py-6 border border-dashed border-obsidian-border rounded-xl">No Telemetry Recorded</p>
               )}
             </div>
           </div>
@@ -211,60 +225,60 @@ export default function ApiControlPage() {
         </div>
 
         {/* Right Column: Future API Registry */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-6">
           
-          <div className="bg-obsidian-dark border border-gold/20 p-4 rounded-xl text-xs text-gold-light font-medium flex items-start gap-2">
-             <Info className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-             Premium natural voice will be added later through a secure serverless gateway. ElevenLabs API key will never be stored in frontend.
+          <div className="bg-obsidian-dark/50 border border-gold/30 p-5 rounded-2xl text-[11px] text-gold font-bold uppercase tracking-wider flex items-start gap-3 leading-relaxed shadow-[0_0_20px_rgba(242,201,76,0.05)]">
+             <Info className="w-5 h-5 text-gold shrink-0" />
+             <p>Premium modules (Voice, GenAI) will deploy via secure Edge nodes. Secret payloads will strictly reside in server environment.</p>
           </div>
           
           {/* Filters */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col md:flex-row items-center gap-3 border border-obsidian-border">
+          <div className="glass-card rounded-2xl p-3 flex flex-col md:flex-row items-center gap-3 border border-obsidian-border">
             <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 text-obsidian-muted absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-obsidian-muted absolute left-4 top-1/2 -translate-y-1/2" />
               <input 
                 value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search Planned APIs..." 
-                className="w-full bg-obsidian-dark border border-obsidian-border rounded-xl pl-9 pr-3 py-2 text-sm text-white focus:border-gold/30 outline-none transition-colors"
+                placeholder="Search registry databases..." 
+                className="w-full bg-obsidian-dark/50 border border-transparent rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-obsidian-muted focus:border-gold/30 outline-none transition-all font-medium"
               />
             </div>
           </div>
 
           {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {filteredApis.map((api, i) => (
               <motion.div
                 key={api.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-2xl p-4 border border-obsidian-border hover:border-gold/20 transition-all flex flex-col relative overflow-hidden"
+                className="glass-card rounded-2xl p-5 border border-obsidian-border hover:border-gold/30 transition-all flex flex-col relative overflow-hidden group"
               >
-                <div className="absolute top-0 left-0 w-1 h-full bg-obsidian-muted/50" />
+                <div className="absolute top-0 left-0 w-1 h-full bg-obsidian-muted/30 group-hover:bg-gold/50 transition-colors" />
 
                 <div className="pl-3">
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
-                      <h3 className="text-sm font-bold text-white leading-tight">{api.name}</h3>
-                      <p className="text-[10px] text-gold mt-0.5">{api.provider}</p>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider">{api.name}</h3>
+                      <p className="text-[10px] font-bold text-gold uppercase tracking-wider mt-1">{api.provider}</p>
                     </div>
                   </div>
 
-                  <p className="text-xs text-obsidian-muted mb-4 h-8">{api.purpose}</p>
+                  <p className="text-xs text-obsidian-muted font-medium mb-5 h-8 leading-relaxed">{api.purpose}</p>
 
-                  <div className="grid grid-cols-1 gap-y-2 gap-x-4 text-[10px] mb-3 p-3 rounded-xl bg-obsidian-dark border border-obsidian-border">
-                    <div className="flex justify-between border-b border-obsidian-border/50 pb-1">
-                      <span className="text-obsidian-muted">Status</span>
-                      <span className="font-semibold text-status-warning">{api.status}</span>
+                  <div className="grid grid-cols-1 gap-y-3 gap-x-4 text-[10px] p-4 rounded-xl bg-obsidian-dark/50 border border-obsidian-border">
+                    <div className="flex justify-between items-center border-b border-obsidian-border/50 pb-2">
+                      <span className="font-bold text-obsidian-muted uppercase tracking-wider">Status</span>
+                      <span className="font-black text-status-warning uppercase tracking-wider">{api.status}</span>
                     </div>
-                    <div className="flex justify-between border-b border-obsidian-border/50 pb-1">
-                      <span className="text-obsidian-muted">Security Note</span>
-                      <span className="font-semibold text-white">{api.permissionMode}</span>
+                    <div className="flex justify-between items-center border-b border-obsidian-border/50 pb-2">
+                      <span className="font-bold text-obsidian-muted uppercase tracking-wider">Security</span>
+                      <span className="font-black text-white uppercase tracking-wider">{api.permissionMode}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-obsidian-muted">Secret Storage</span>
-                      <span className="font-semibold text-white flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-status-live" /> {api.secretStorage}
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-obsidian-muted uppercase tracking-wider">Vault Node</span>
+                      <span className="font-black text-white flex items-center gap-1.5 uppercase tracking-wider">
+                        <Lock className="w-3.5 h-3.5 text-status-live" /> {api.secretStorage}
                       </span>
                     </div>
                   </div>

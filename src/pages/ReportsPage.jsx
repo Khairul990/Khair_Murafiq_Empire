@@ -53,10 +53,7 @@ export default function ReportsPage() {
     return true
   }
 
-  // Pre-filter arrays based on timeFilter where applicable (e.g., tasks updated, alerts created)
-  // For the main dashboard counts, we might just filter everything. 
-  // However, project health is current state, so we don't time-filter projects themselves easily.
-  // We'll apply time filters mostly to alerts and tasks.
+  // Pre-filter arrays based on timeFilter where applicable
   const filteredTasks = tasks.filter(t => filterByTime(t.updatedAt || t.id))
   const filteredAlerts = alerts.filter(a => filterByTime(a.createdAt))
 
@@ -90,9 +87,9 @@ export default function ReportsPage() {
     { title: 'Healthy Websites', value: healthyProjects.length, icon: CheckCircle, color: 'text-status-live' },
     { title: 'Warning/Error Sites', value: warningProjects.length, icon: AlertTriangle, color: 'text-status-error' },
     { title: 'Active Alerts', value: activeAlerts.length, icon: Activity, color: 'text-status-warning' },
-    { title: 'Pending Tasks', value: pendingTasks.length, icon: ListChecks, color: 'text-status-dev' },
-    { title: 'Completed Tasks', value: completedTasks.length, icon: FileText, color: 'text-purple-400' },
-    { title: 'This Month Income', value: `$${thisMonthIncome.toFixed(2)}`, icon: DollarSign, color: 'text-gold' },
+    { title: 'Pending Directives', value: pendingTasks.length, icon: ListChecks, color: 'text-cyan-signal' },
+    { title: 'Completed Directives', value: completedTasks.length, icon: FileText, color: 'text-purple-400' },
+    { title: 'MTD Revenue', value: `$${thisMonthIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: DollarSign, color: 'text-gold' },
     { title: 'Social Posts Planned', value: plannedSocialPosts, icon: Share2, color: 'text-obsidian-muted' }
   ]
 
@@ -105,27 +102,27 @@ export default function ReportsPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-6 pb-20"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl lg:text-2xl font-extrabold text-white flex items-center gap-2">
-            Reports <span className="gold-gradient-text">Center</span>
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gold" />}
+          <h1 className="text-xl lg:text-3xl font-extrabold text-white flex items-center gap-3">
+            Intelligence <span className="gold-gradient-text">Reports</span>
+            {isLoading && <Loader2 className="w-5 h-5 animate-spin text-gold" />}
           </h1>
-          <p className="text-xs text-obsidian-muted mt-1">
-            {isLoading ? 'Loading from Firebase...' : 'Generate and view analytics across the empire'}
+          <p className="text-xs text-obsidian-muted mt-1 uppercase tracking-widest font-bold">
+            {isLoading ? 'Syncing Intelligence Data...' : 'Generate and view analytics across the empire'}
           </p>
-          {errorMsg && <p className="text-[10px] text-status-error mt-1">{errorMsg}</p>}
+          {errorMsg && <p className="text-[10px] text-status-error mt-2 bg-status-error/10 px-2 py-1 rounded inline-block">{errorMsg}</p>}
         </div>
         
-        <div className="flex gap-2 bg-obsidian-card p-1.5 rounded-xl border border-obsidian-border flex-wrap">
+        <div className="flex gap-2 bg-obsidian-dark/50 p-1.5 rounded-xl border border-obsidian-border flex-wrap overflow-x-auto empire-scrollbar">
           {['Today', 'This Week', 'This Month', 'All Time'].map(f => (
             <button
               key={f}
               onClick={() => setTimeFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                timeFilter === f ? 'bg-gold/10 text-gold' : 'text-obsidian-muted hover:text-white'
+              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                timeFilter === f ? 'bg-gold/10 text-gold border border-gold/30 shadow-[0_0_10px_rgba(242,201,76,0.1)]' : 'text-obsidian-muted hover:bg-obsidian-card border border-transparent'
               }`}
             >
               {f}
@@ -141,46 +138,50 @@ export default function ReportsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="glass-card-hover rounded-2xl p-4 flex flex-col justify-between"
+            className="glass-card rounded-2xl p-5 flex flex-col justify-between border border-obsidian-border hover:border-gold/30 transition-all group relative overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-obsidian-muted">{c.title}</span>
-              <c.icon className={`w-4 h-4 ${c.color}`} />
-            </div>
-            <div>
-              <p className={`text-xl font-extrabold ${c.color}`}>{c.value}</p>
-              {c.note && <p className="text-[9px] text-obsidian-muted mt-1">{c.note}</p>}
+            <div className="absolute top-0 left-0 w-1 h-full bg-obsidian-muted/20 group-hover:bg-gold/50 transition-colors" />
+            <div className="pl-3">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[9px] font-black uppercase tracking-wider text-obsidian-muted">{c.title}</span>
+                <c.icon className={`w-4 h-4 ${c.color}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-black tracking-tight ${c.color}`}>{c.value}</p>
+                {c.note && <p className="text-[9px] font-bold uppercase tracking-wider text-obsidian-muted mt-2">{c.note}</p>}
+              </div>
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* Website-wise Report Table */}
-      <div className="glass-card rounded-2xl p-5 overflow-hidden">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Shield className="w-4 h-4 text-gold" />
-            Website Health Report
+      <div className="glass-card rounded-2xl p-6 overflow-hidden border border-gold/20 relative">
+        <div className="absolute top-0 left-0 w-full h-1 gold-gradient" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-3">
+            <Shield className="w-5 h-5 text-gold" />
+            Asset Health Matrix
           </h3>
-          <button onClick={handleDownloadPDF} className="flex items-center gap-1.5 px-3 py-1.5 bg-obsidian-dark text-xs text-white rounded-lg border border-obsidian-border hover:border-gold/30 transition-all">
-            <Download className="w-3.5 h-3.5" /> Export PDF
+          <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 px-4 py-2 bg-obsidian-dark text-[10px] font-black uppercase tracking-wider text-white rounded-xl border border-obsidian-border hover:border-gold/50 transition-all">
+            <Download className="w-4 h-4" /> Export Report
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto empire-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-obsidian-border text-[10px] uppercase tracking-wider text-obsidian-muted">
-                <th className="pb-3 pr-4 font-semibold">Website</th>
-                <th className="pb-3 px-4 font-semibold">Health</th>
-                <th className="pb-3 px-4 font-semibold">Score</th>
-                <th className="pb-3 px-4 font-semibold text-center">Alerts</th>
-                <th className="pb-3 px-4 font-semibold text-center">Tasks</th>
-                <th className="pb-3 px-4 font-semibold">Last Checked</th>
-                <th className="pb-3 pl-4 font-semibold">Notes / Issues</th>
+              <tr className="border-b border-obsidian-border/50 text-[9px] uppercase tracking-widest text-obsidian-muted">
+                <th className="pb-4 pr-4 font-black">Asset Identifier</th>
+                <th className="pb-4 px-4 font-black">Status</th>
+                <th className="pb-4 px-4 font-black">Score</th>
+                <th className="pb-4 px-4 font-black text-center">Active Alerts</th>
+                <th className="pb-4 px-4 font-black text-center">Pending Directives</th>
+                <th className="pb-4 px-4 font-black">Last Sync</th>
+                <th className="pb-4 pl-4 font-black">Telemetry Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-border">
+            <tbody className="divide-y divide-obsidian-border/30">
               {projects.map(p => {
                 const pAlerts = activeAlerts.filter(a => a.projectId === p.id)
                 const pTasks = pendingTasks.filter(t => t.projectId === p.id)
@@ -193,24 +194,33 @@ export default function ReportsPage() {
                   computedHealth === 'Healthy' ? 'text-status-live' :
                   computedHealth === 'Warning' ? 'text-status-warning' :
                   computedHealth === 'Error' ? 'text-status-error' : 'text-obsidian-muted'
+                  
+                const hBg = 
+                  computedHealth === 'Healthy' ? 'bg-status-live/10' :
+                  computedHealth === 'Warning' ? 'bg-status-warning/10' :
+                  computedHealth === 'Error' ? 'bg-status-error/10' : 'bg-obsidian-dark/50'
 
                 return (
-                  <tr key={p.id} className="text-xs hover:bg-obsidian-dark/30 transition-colors">
-                    <td className="py-3 pr-4 font-bold text-white whitespace-nowrap">{p.name}</td>
-                    <td className={`py-3 px-4 font-bold ${hColor} whitespace-nowrap`}>{computedHealth}</td>
-                    <td className="py-3 px-4 text-gold whitespace-nowrap">{p.healthScore ?? '-'}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pAlerts.length > 0 ? 'bg-status-warning/10 text-status-warning' : 'bg-obsidian-dark text-obsidian-muted'}`}>
+                  <tr key={p.id} className="hover:bg-obsidian-dark/50 transition-colors group">
+                    <td className="py-4 pr-4 text-xs font-bold text-white whitespace-nowrap group-hover:text-gold transition-colors">{p.name}</td>
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${hColor} ${hBg} border border-transparent`}>
+                        {computedHealth}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-xs font-black text-gold whitespace-nowrap">{p.healthScore ?? '-'}</td>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black ${pAlerts.length > 0 ? 'bg-status-warning/10 text-status-warning border border-status-warning/30 shadow-[0_0_10px_rgba(249,115,22,0.2)]' : 'bg-obsidian-dark/50 text-obsidian-muted border border-obsidian-border'}`}>
                         {pAlerts.length}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pTasks.length > 0 ? 'bg-status-dev/10 text-status-dev' : 'bg-obsidian-dark text-obsidian-muted'}`}>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black ${pTasks.length > 0 ? 'bg-cyan-signal/10 text-cyan-signal border border-cyan-signal/30 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-obsidian-dark/50 text-obsidian-muted border border-obsidian-border'}`}>
                         {pTasks.length}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-obsidian-muted whitespace-nowrap">{p.lastCheckedAt ? new Date(p.lastCheckedAt).toLocaleDateString() : 'N/A'}</td>
-                    <td className="py-3 pl-4 text-obsidian-muted text-[11px] max-w-[200px] truncate" title={p.issueSummary || p.uptimeNote || p.notes}>
+                    <td className="py-4 px-4 text-[10px] font-bold uppercase tracking-wider text-obsidian-muted whitespace-nowrap">{p.lastCheckedAt ? new Date(p.lastCheckedAt).toLocaleDateString() : 'N/A'}</td>
+                    <td className="py-4 pl-4 text-obsidian-muted text-[10px] font-medium max-w-[200px] truncate leading-relaxed" title={p.issueSummary || p.uptimeNote || p.notes}>
                       {p.issueSummary || p.uptimeNote || p.notes || '-'}
                     </td>
                   </tr>
@@ -218,8 +228,8 @@ export default function ReportsPage() {
               })}
               {projects.length === 0 && !isLoading && (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-obsidian-muted text-xs">
-                    No website data available.
+                  <td colSpan="7" className="py-12 text-center text-obsidian-muted border-t border-obsidian-border border-dashed">
+                    <p className="text-[10px] font-black uppercase tracking-wider">No Asset Telemetry Available</p>
                   </td>
                 </tr>
               )}
