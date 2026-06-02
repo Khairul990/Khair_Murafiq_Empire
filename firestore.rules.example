@@ -50,6 +50,18 @@ service cloud.firestore {
     match /control_connection_tests/{docId} {
       allow read, write: if isOwner();
     }
+    // Website Agent Collections
+    match /control_website_events/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    match /control_website_errors/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    match /control_website_health/{docId} {
+      allow read, write: if isOwner();
+    }
     
     // Default Deny Rule (Fallback)
     match /{document=**} {
