@@ -225,6 +225,16 @@ export default function EmpireAssistant({ open, onToggle }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const getRiskExplanation = (risk) => {
+    if (risk === 'Need Review') {
+       return `বর্তমান অবস্থা: Need Review.\nকারণ: কিছু alert/task pending আছে অথবা website health check দরকার।\nপ্রথমে Website Control পেজে Known Issue দেখুন।\nতারপর Alert Center / Task Manager / Website Agent check করুন।`
+    }
+    if (risk === 'Safe') return `বর্তমান অবস্থা: Safe.\nসব শান্ত ও সুরক্ষিত আছে, আলহামদুলিল্লাহ।`
+    if (risk === 'Warning') return `বর্তমান অবস্থা: Warning.\nকারণ: কোনো non-critical error বা pending task জমে আছে।`
+    if (risk === 'Critical') return `বর্তমান অবস্থা: Critical.\nকারণ: সিস্টেমে High/Critical alert রয়েছে। খুব দ্রুত Alert Center চেক করুন।`
+    return `বর্তমান অবস্থা: ${risk}`
+  }
+
   const generateReport = async () => {
     try {
       const [projects, tasks, alerts, reports, events] = await Promise.all([
@@ -256,7 +266,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       priorities = priorities.slice(0, 3)
 
       let bnText = `আসসালামু আলাইকুম বস।\n\n`
-      bnText += `📊 Overall Status: ${systemRisk}\n\n`
+      bnText += `${getRiskExplanation(systemRisk)}\n\n`
       
       if (pProjects.length === 0) {
           bnText += `🌐 Website Health Summary:\nএই data এখনো পাওয়া যায়নি।\n\n`
@@ -308,6 +318,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
       
       let text = `বস, আপনার কাজের তালিকা:\n\n`
+      text += `${getRiskExplanation(systemRisk)}\n\n`
       
       if (activeAlerts.length > 0) {
         text += `🚨 Alerts: ${activeAlerts.length}টি alert আছে। যদি alert থাকে, তবে আগে alert চেক করুন।\n\n`
@@ -349,7 +360,15 @@ export default function EmpireAssistant({ open, onToggle }) {
        const cAlerts = pAlerts.filter(a => (a.severity === 'High' || a.severity === 'Critical') && a.status !== 'Fixed' && a.status !== 'Ignored').length
        const wProjects = pProjects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown').length
        
-       return `আসসালামু আলাইকুম বস। বর্তমান অবস্থা ${systemRisk}। আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+       let voiceTxt = `আসসালামু আলাইকুম বস। `
+       if (systemRisk === 'Need Review') {
+          voiceTxt += `বর্তমান অবস্থা Need Review। কারণ কিছু অ্যালার্ট বা কাজ বাকি আছে। `
+       } else {
+          voiceTxt += `বর্তমান অবস্থা ${systemRisk}। `
+       }
+       voiceTxt += `আপনার ${cAlerts}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks}টি কাজ বাকি আছে, এবং ${wProjects}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+       
+       return voiceTxt
     } catch {
        return 'দুঃখিত, ডাটা পাওয়া যায়নি।'
     }
@@ -417,17 +436,7 @@ export default function EmpireAssistant({ open, onToggle }) {
       let finalTxt = resText
       
       if (vagueWords.includes(resText.trim())) {
-         if (resText.trim() === 'Need Review') {
-            finalTxt = `বর্তমান অবস্থা: Need Review.\nকারণ: কিছু alert/task pending আছে অথবা website health check দরকার।\nপ্রথমে Website Control পেজে Known Issue দেখুন, তারপর Alert Center/Task Manager check করুন।`
-         } else if (resText.trim() === 'Safe') {
-            finalTxt = `বর্তমান অবস্থা: Safe.\nসব শান্ত ও সুরক্ষিত আছে, আলহামদুলিল্লাহ।`
-         } else if (resText.trim() === 'Warning') {
-            finalTxt = `বর্তমান অবস্থা: Warning.\nকারণ: কোনো non-critical error বা pending task জমে আছে।`
-         } else if (resText.trim() === 'Critical') {
-            finalTxt = `বর্তমান অবস্থা: Critical.\nকারণ: সিস্টেমে High/Critical alert রয়েছে।`
-         } else {
-            finalTxt = `বর্তমান অবস্থা: ${resText.trim()}`
-         }
+         finalTxt = getRiskExplanation(resText.trim())
       } else {
          // Fallback for unclear message
          finalTxt = `আমি ঠিক বুঝতে পারিনি। আপনি চাইলে ‘আজকের রিপোর্ট’, ‘কাজের তালিকা’, অথবা ‘নিরাপত্তা চেক’ লিখতে পারেন।`
@@ -496,10 +505,10 @@ export default function EmpireAssistant({ open, onToggle }) {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                  className={`max-w-[95%] w-fit rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words max-h-[60vh] overflow-y-auto empire-scrollbar ${
                     msg.role === 'user'
                       ? 'bg-gold/10 text-gold-light border border-gold/15 rounded-br-sm'
-                      : 'bg-obsidian-card border border-obsidian-border text-obsidian-text rounded-bl-sm shadow-lg'
+                      : 'bg-obsidian-card border border-obsidian-border text-white rounded-bl-sm shadow-lg'
                   }`}
                 >
                   {msg.text}
