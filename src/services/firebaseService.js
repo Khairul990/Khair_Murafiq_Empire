@@ -83,6 +83,17 @@ export const firebaseService = {
     await deleteDoc(doc(db, "control_reports", String(id)))
   },
 
+  // WEBSITE AGENT (Events, Errors, Health)
+  getWebsiteEvents: async () => await getCollectionData('control_website_events'),
+  saveWebsiteEvent: async (event) => {
+    if (!auth.currentUser || auth.currentUser.email !== 'khairul2052007@gmail.com') throw new Error("Access Denied")
+    await setDoc(doc(db, "control_website_events", String(event.id || Date.now())), withStandardFields(event))
+    return event
+  },
+  getWebsiteErrors: async () => await getCollectionData('control_website_errors'),
+  getWebsiteHealth: async () => await getCollectionData('control_website_health'),
+
+
 
   // CONNECTION TEST
   testFirebaseConnection: async () => {

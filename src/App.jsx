@@ -20,6 +20,7 @@ import ApiControlPage from './pages/ApiControlPage'
 import SafetyPage from './pages/SafetyPage'
 import SettingsPage from './pages/SettingsPage'
 import AssistantSettingsPage from './pages/AssistantSettingsPage'
+import WebsiteAgentPage from './pages/WebsiteAgentPage'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/safety" element={<SafetyPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/assistant-settings" element={<AssistantSettingsPage />} />
+            <Route path="/website-agent" element={<WebsiteAgentPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         )}

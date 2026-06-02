@@ -11,7 +11,7 @@ const statusColors = {
   Building: 'building',
 }
 
-export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, onUpdateHealth, alerts = [], tasks = [] }) {
+export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, onUpdateHealth, alerts = [], tasks = [], agentEvents = [] }) {
   const statusClass = statusColors[project.status] || 'offline'
   
   const projectAlerts = alerts.filter(a => a.projectId === project.id && a.status !== 'Fixed' && a.status !== 'Ignored')
@@ -21,6 +21,9 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, onU
   const projectTasks = tasks.filter(t => t.projectId === project.id)
   const activeTasks = projectTasks.filter(t => t.status !== 'Done')
   const hasBlockedOrCriticalTask = activeTasks.some(t => t.status === 'Blocked' || t.priority === 'Critical')
+
+  const projectAgentEvents = agentEvents.filter(e => e.websiteId === project.id)
+  const recentAgentEvents = projectAgentEvents.filter(e => new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
 
   let computedHealth = project.healthStatus || 'Unknown'
   if (hasCritical) computedHealth = 'Error'
@@ -119,6 +122,13 @@ export default function ProjectCard({ project, onEdit, onDelete, onAddAlert, onU
         <div className="mt-1 flex items-center gap-2">
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${healthColor}`}>
             Health: {computedHealth}
+          </span>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+            recentAgentEvents.length > 0 
+              ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' 
+              : 'text-obsidian-muted bg-obsidian-light border-obsidian-border'
+          }`}>
+            {recentAgentEvents.length > 0 ? `${recentAgentEvents.length} Agent Activity` : 'No Agent Events'}
           </span>
         </div>
 

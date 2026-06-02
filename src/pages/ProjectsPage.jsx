@@ -9,6 +9,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState([])
   const [alerts, setAlerts] = useState([])
   const [tasks, setTasks] = useState([])
+  const [agentEvents, setAgentEvents] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   
@@ -38,14 +39,16 @@ export default function ProjectsPage() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [p, a, t] = await Promise.all([
+        const [p, a, t, e] = await Promise.all([
           storageAdapter.getProjects(),
           storageAdapter.getAlerts(),
-          storageAdapter.getTasks()
+          storageAdapter.getTasks(),
+          storageAdapter.getWebsiteEvents()
         ])
         setProjects(p)
         setAlerts(a)
         setTasks(t)
+        setAgentEvents(e || [])
       } catch (err) {
         setErrorMsg('Firebase unavailable. Local fallback active.')
       }
@@ -333,6 +336,7 @@ export default function ProjectsPage() {
               }}
               alerts={alerts} 
               tasks={tasks} 
+              agentEvents={agentEvents}
             />
           </motion.div>
         ))}

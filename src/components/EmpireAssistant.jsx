@@ -102,10 +102,11 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const runProactiveCheck = async () => {
     try {
-      const [alerts, tasks, projects] = await Promise.all([
+      const [alerts, tasks, projects, events] = await Promise.all([
         storageAdapter.getAlerts(),
         storageAdapter.getTasks(),
-        storageAdapter.getProjects()
+        storageAdapter.getProjects(),
+        storageAdapter.getWebsiteEvents()
       ])
       
       setFirebaseError(false)
@@ -116,6 +117,8 @@ export default function EmpireAssistant({ open, onToggle }) {
       const criticalOrHighAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
       const errorProjects = projects.filter(p => p.healthStatus === 'Error')
       const pendingCriticalTasks = tasks.filter(t => t.status !== 'Done' && t.priority === 'Critical')
+      const criticalEvents = (events || []).filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
+
 
       let spokenData = {}
       try {
@@ -140,6 +143,17 @@ export default function EmpireAssistant({ open, onToggle }) {
             shouldSpeak = true
             spokenData[`proj_${p.id}`] = true
             msgWebsite = p.name || ''
+            break
+          }
+        }
+      }
+
+      if (!shouldSpeak) {
+        for (const e of criticalEvents) {
+          if (settings.alertVoice && !spokenData[`agent_event_${e.id}`]) {
+            shouldSpeak = true
+            spokenData[`agent_event_${e.id}`] = true
+            msgWebsite = e.websiteName || 'Website Agent'
             break
           }
         }
@@ -231,16 +245,19 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const generateReport = async () => {
     try {
-      const [projects, tasks, alerts, reports] = await Promise.all([
+      const [projects, tasks, alerts, reports, events] = await Promise.all([
         storageAdapter.getProjects(),
         storageAdapter.getTasks(),
         storageAdapter.getAlerts(),
-        storageAdapter.getReports()
+        storageAdapter.getReports(),
+        storageAdapter.getWebsiteEvents()
       ])
 
       const pendingTasks = tasks.filter(t => t.status !== 'Done')
       const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
+      const criticalEvents = (events || []).filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
+      
       const warningProjects = projects.filter(p => {
         const pAlerts = activeAlerts.filter(a => a.projectId === p.id)
         const hasCritical = pAlerts.some(a => a.severity === 'Critical')
@@ -279,6 +296,10 @@ export default function EmpireAssistant({ open, onToggle }) {
         bnText += `🚨 Critical/High Alerts: ${criticalAlerts.length}টি আছে। দয়া করে Alert Center দেখুন।\n\n`
       } else {
         bnText += `✅ কোনো Critical/High অ্যালার্ট নেই।\n\n`
+      }
+
+      if (criticalEvents.length > 0) {
+        bnText += `⚠️ Recent Agent Critical Events: ${criticalEvents.length}টি। Website Agent পেজ চেক করুন।\n\n`
       }
 
       if (pendingTasks.length > 0) {

@@ -19,6 +19,7 @@ const navItems = [
   { to: '/goals', icon: Target, label: 'Goals' },
   { to: '/reports', icon: FileText, label: 'Reports Center' },
   { to: '/api-engine', icon: Server, label: 'API Control Engine' },
+  { to: '/website-agent', icon: Server, label: 'Website Agent' },
   { to: '/safety', icon: ShieldAlert, label: 'Safety Rules' },
   { to: '/assistant-settings', icon: Bot, label: 'Assistant Settings' },
   { to: '/settings', icon: Settings, label: 'Settings' },

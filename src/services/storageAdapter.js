@@ -102,5 +102,30 @@ export const storageAdapter = {
   },
   deleteReport: async (id, allReports) => {
     await cloudOperation(() => firebaseService.deleteReport(id), 'km_empire_reports', allReports)
+  },
+
+  getWebsiteEvents: async () => {
+    if (storageMode === 'firebase') {
+      try { return await firebaseService.getWebsiteEvents() }
+      catch (err) { return localFallback.get('control_website_events') }
+    }
+    return localFallback.get('control_website_events')
+  },
+  saveWebsiteEvent: async (event, allEvents) => {
+    await cloudOperation(() => firebaseService.saveWebsiteEvent(event), 'control_website_events', allEvents)
+  },
+  getWebsiteErrors: async () => {
+    if (storageMode === 'firebase') {
+      try { return await firebaseService.getWebsiteErrors() }
+      catch (err) { return localFallback.get('control_website_errors') }
+    }
+    return localFallback.get('control_website_errors')
+  },
+  getWebsiteHealth: async () => {
+    if (storageMode === 'firebase') {
+      try { return await firebaseService.getWebsiteHealth() }
+      catch (err) { return localFallback.get('control_website_health') }
+    }
+    return localFallback.get('control_website_health')
   }
 }
