@@ -1,29 +1,46 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Bot, Settings2, ShieldAlert, Volume2, BellRing, Command, FileText, CheckCircle, MicOff, RefreshCw, Trash2, VolumeX } from 'lucide-react'
+import { Bot, Settings2, ShieldAlert, Volume2, BellRing, Command, FileText, CheckCircle, MicOff, RefreshCw, Trash2, VolumeX, Activity } from 'lucide-react'
 import { getAuditLogs, clearAuditLogs, addAuditLog } from '../utils/auditLogger'
 
 const defaultSettings = {
   voiceOutput: true,
   autoVoiceBriefing: false,
+  monitorActive: false,
   quietMode: false,
-  checkInterval: 300000, // 5 mins
+  checkInterval: 300000,
   alertVoice: true,
   taskReminderVoice: true,
   healthWarningVoice: true,
+  agentEventVoice: true,
 }
 
 export default function AssistantSettingsPage() {
   const [settings, setSettings] = useState(defaultSettings)
   const [logs, setLogs] = useState([])
   const [isTestPlaying, setIsTestPlaying] = useState(false)
+  const [stats, setStats] = useState({
+    lastChecked: 'Never',
+    lastVoiceReport: 'Never',
+    lastAlertSpoken: 'None'
+  })
 
-  const loadSettings = () => {
+  const loadSettingsAndStats = () => {
     try {
       const stored = localStorage.getItem('km_empire_assistant_settings')
       if (stored) {
         setSettings({ ...defaultSettings, ...JSON.parse(stored) })
       }
+      
+      const lastCheckedStr = localStorage.getItem('km_empire_last_checked_at')
+      const lastVoiceReportStr = localStorage.getItem('km_empire_last_voice_report_at')
+      const lastAlertSpokenStr = localStorage.getItem('km_empire_last_spoken_alert')
+      
+      setStats({
+        lastChecked: lastCheckedStr ? new Date(lastCheckedStr).toLocaleTimeString() : 'Never',
+        lastVoiceReport: lastVoiceReportStr ? new Date(lastVoiceReportStr).toLocaleTimeString() : 'Never',
+        lastAlertSpoken: lastAlertSpokenStr || 'None'
+      })
     } catch (err) {
       console.error('Failed to load settings', err)
     }
@@ -34,12 +51,19 @@ export default function AssistantSettingsPage() {
   }
 
   useEffect(() => {
-    loadSettings()
+    loadSettingsAndStats()
     loadLogs()
 
-    const handleUpdate = () => loadSettings()
+    const handleUpdate = () => loadSettingsAndStats()
     window.addEventListener('assistant_settings_updated', handleUpdate)
-    return () => window.removeEventListener('assistant_settings_updated', handleUpdate)
+    
+    // Poll stats every 5 seconds to keep UI fresh
+    const interval = setInterval(handleUpdate, 5000)
+    
+    return () => {
+      window.removeEventListener('assistant_settings_updated', handleUpdate)
+      clearInterval(interval)
+    }
   }, [])
 
   const updateSetting = (key, value) => {
@@ -81,6 +105,10 @@ export default function AssistantSettingsPage() {
     window.speechSynthesis.speak(utterance)
   }
 
+  const handleTestBriefing = () => {
+    window.dispatchEvent(new Event('test_auto_briefing'))
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -96,6 +124,11 @@ export default function AssistantSettingsPage() {
         <p className="text-xs text-obsidian-muted mt-1">
           Configure Empire AI behavior, voice monitoring, and proactive alerts.
         </p>
+      </div>
+      
+      <div className="bg-obsidian-dark border border-gold/20 p-3 rounded-lg text-[11px] text-gold-light font-medium flex items-start gap-2">
+         <ShieldAlert className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+         Auto voice works only while Control Room tab is open, browser audio is allowed, and Quiet Mode is OFF.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -116,27 +149,41 @@ export default function AssistantSettingsPage() {
               <span className="text-white font-bold bg-obsidian-dark px-2 py-1 rounded">Bengali</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-obsidian-muted">Voice Output:</span>
-              <span className="text-white font-bold bg-obsidian-dark px-2 py-1 rounded">Browser SpeechSynthesis</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
               <span className="text-obsidian-muted">Real AI API:</span>
               <span className="text-status-warning font-bold bg-status-warning/10 px-2 py-1 rounded border border-status-warning/20">Not Connected</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-obsidian-muted">Voice Command:</span>
-              <span className="text-obsidian-muted font-bold bg-obsidian-dark px-2 py-1 rounded flex items-center gap-1">
-                <MicOff className="w-3 h-3" /> Not Connected
+              <span className="text-obsidian-muted">Voice Output Engine:</span>
+              <span className="text-white font-bold bg-obsidian-dark px-2 py-1 rounded flex items-center gap-1">
+                 Browser SpeechSynthesis
               </span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-obsidian-muted">Proactive Monitor:</span>
-              <span className="text-status-live font-bold bg-status-live/10 px-2 py-1 rounded">Available</span>
             </div>
           </div>
         </div>
 
-        {/* B. Voice Settings */}
+        {/* B. Runtime Trackers */}
+        <div className="glass-card rounded-2xl p-5 border border-obsidian-border space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="w-5 h-5 text-blue-400" />
+            <h2 className="text-sm font-bold text-white">Runtime Trackers</h2>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-obsidian-muted">Last Checked Data:</span>
+              <span className="text-white font-mono bg-obsidian-dark px-2 py-1 rounded border border-obsidian-border/50">{stats.lastChecked}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-obsidian-muted">Last Voice Report:</span>
+              <span className="text-white font-mono bg-obsidian-dark px-2 py-1 rounded border border-obsidian-border/50">{stats.lastVoiceReport}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-obsidian-muted">Last Alert Spoken:</span>
+              <span className="text-gold font-mono bg-gold/10 px-2 py-1 rounded border border-gold/20 truncate max-w-[150px]">{stats.lastAlertSpoken}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* C. Voice & Core Settings */}
         <div className="glass-card rounded-2xl p-5 border border-obsidian-border space-y-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -145,7 +192,7 @@ export default function AssistantSettingsPage() {
             </div>
             <button
               onClick={handleTestVoice}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border flex items-center gap-1 ${
                 isTestPlaying 
                   ? 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
                   : 'bg-gold/10 text-gold border-gold/30 hover:bg-gold/20'
@@ -161,101 +208,76 @@ export default function AssistantSettingsPage() {
               <input type="checkbox" checked={settings.voiceOutput} onChange={(e) => updateSetting('voiceOutput', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
             </label>
             <label className="flex items-center justify-between cursor-pointer group">
-              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Auto Voice Briefing (On Load)</span>
-              <input type="checkbox" checked={settings.autoVoiceBriefing} onChange={(e) => updateSetting('autoVoiceBriefing', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
-            </label>
-            <label className="flex items-center justify-between cursor-pointer group">
               <span className="text-xs text-status-warning font-bold group-hover:text-status-warning/80 transition-colors">Quiet Mode (Mute All)</span>
               <input type="checkbox" checked={settings.quietMode} onChange={(e) => updateSetting('quietMode', e.target.checked)} className="accent-status-warning w-4 h-4 cursor-pointer" />
             </label>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-obsidian-text">Check Interval</span>
-              <select 
-                value={settings.checkInterval}
-                onChange={(e) => updateSetting('checkInterval', Number(e.target.value))}
-                className="bg-obsidian-dark border border-obsidian-border rounded px-2 py-1 text-xs text-white outline-none focus:border-gold/30"
-              >
-                <option value={300000}>5 minutes</option>
-                <option value={600000}>10 minutes</option>
-                <option value={1800000}>30 minutes</option>
-              </select>
+            
+            <div className="border-t border-obsidian-border/50 pt-3 mt-3">
+               <label className="flex items-center justify-between cursor-pointer group mb-3">
+                  <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Proactive Background Monitor</span>
+                  <input type="checkbox" checked={settings.monitorActive} onChange={(e) => updateSetting('monitorActive', e.target.checked)} className="accent-status-live w-4 h-4 cursor-pointer" />
+               </label>
+               <div className="flex items-center justify-between">
+                  <span className="text-xs text-obsidian-muted">Check Interval</span>
+                  <select 
+                     value={settings.checkInterval}
+                     onChange={(e) => updateSetting('checkInterval', Number(e.target.value))}
+                     className="bg-obsidian-dark border border-obsidian-border rounded px-2 py-1 text-xs text-white outline-none focus:border-gold/30"
+                  >
+                     <option value={300000}>5 minutes</option>
+                     <option value={600000}>10 minutes</option>
+                     <option value={1800000}>30 minutes</option>
+                  </select>
+               </div>
             </div>
           </div>
         </div>
 
-        {/* C. Proactive Alert Settings */}
+        {/* D. Proactive Alert Triggers */}
         <div className="glass-card rounded-2xl p-5 border border-obsidian-border space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BellRing className="w-5 h-5 text-gold" />
-            <h2 className="text-sm font-bold text-white">Proactive Alert Settings</h2>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <BellRing className="w-5 h-5 text-gold" />
+              <h2 className="text-sm font-bold text-white">Alert Triggers</h2>
+            </div>
+            <button onClick={handleTestBriefing} className="px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-obsidian-border hover:bg-obsidian-card text-obsidian-muted hover:text-white">
+               Test Auto Briefing
+            </button>
           </div>
           <div className="space-y-3">
             <label className="flex items-center justify-between cursor-pointer group">
-              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Alert Voice (Critical/High)</span>
+              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Auto Voice Briefing (Periodic)</span>
+              <input type="checkbox" checked={settings.autoVoiceBriefing} onChange={(e) => updateSetting('autoVoiceBriefing', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer group">
+              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Speak Critical/High Alerts</span>
               <input type="checkbox" checked={settings.alertVoice} onChange={(e) => updateSetting('alertVoice', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
             </label>
             <label className="flex items-center justify-between cursor-pointer group">
-              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Task Reminder Voice</span>
+              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Speak Critical Pending Tasks</span>
               <input type="checkbox" checked={settings.taskReminderVoice} onChange={(e) => updateSetting('taskReminderVoice', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
             </label>
             <label className="flex items-center justify-between cursor-pointer group">
-              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Health Warning Voice</span>
+              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Speak Project Health Errors</span>
               <input type="checkbox" checked={settings.healthWarningVoice} onChange={(e) => updateSetting('healthWarningVoice', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer group">
+              <span className="text-xs text-obsidian-text group-hover:text-white transition-colors">Speak Website Agent Critical Events</span>
+              <input type="checkbox" checked={settings.agentEventVoice} onChange={(e) => updateSetting('agentEventVoice', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
             </label>
             
             <div className="bg-obsidian-dark p-3 rounded-lg border border-obsidian-border mt-2">
               <p className="text-[10px] text-obsidian-muted flex items-start gap-1.5 leading-tight">
                 <CheckCircle className="w-3.5 h-3.5 text-status-live shrink-0 mt-0.5" />
-                Repeat prevention is ACTIVE. The assistant will not read the same alert/task/project issue twice per session.
+                Spam Prevention ACTIVE. The assistant tracks spoken items locally and prevents duplicate alerts during the same session.
               </p>
             </div>
           </div>
         </div>
 
-        {/* D. Keyboard Commander */}
-        <div className="glass-card rounded-2xl p-5 border border-obsidian-border space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Command className="w-5 h-5 text-gold" />
-            <h2 className="text-sm font-bold text-white">Keyboard Commander</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-2 text-xs font-mono">
-            <div className="flex justify-between items-center bg-obsidian-dark px-3 py-2 rounded-lg border border-obsidian-border/50">
-              <span className="text-obsidian-text">Quick Report</span>
-              <span className="text-gold font-bold">Ctrl + Shift + R</span>
-            </div>
-            <div className="flex justify-between items-center bg-obsidian-dark px-3 py-2 rounded-lg border border-obsidian-border/50">
-              <span className="text-obsidian-text">Security Check</span>
-              <span className="text-gold font-bold">Ctrl + Shift + S</span>
-            </div>
-            <div className="flex justify-between items-center bg-obsidian-dark px-3 py-2 rounded-lg border border-obsidian-border/50">
-              <span className="text-obsidian-text">Next Safe Action</span>
-              <span className="text-gold font-bold">Ctrl + Shift + N</span>
-            </div>
-            <div className="flex justify-between items-center bg-status-error/5 px-3 py-2 rounded-lg border border-status-error/20">
-              <span className="text-status-error">Emergency Lockdown</span>
-              <span className="text-status-error font-bold">Ctrl + Shift + L</span>
-            </div>
-          </div>
-        </div>
-
       </div>
 
-      {/* E. Assistant Safety Rules */}
-      <div className="glass-card rounded-2xl p-5 border border-status-warning/20 bg-status-warning/5 mt-6">
-        <div className="flex items-center gap-2 mb-3">
-          <ShieldAlert className="w-5 h-5 text-status-warning" />
-          <h2 className="text-sm font-bold text-white">Assistant Safety Rules</h2>
-        </div>
-        <ul className="list-disc list-inside text-xs text-obsidian-muted space-y-1.5 ml-1">
-          <li>No API key/token/password in frontend/GitHub</li>
-          <li>Backup before migration/delete</li>
-          <li>Owner approval before risky action</li>
-          <li>Real API only through backend/serverless later</li>
-          <li>Mock/manual features must be clearly labeled</li>
-        </ul>
-      </div>
-
-      {/* F. Assistant Audit Logs */}
+      {/* E. Assistant Audit Logs */}
       <div className="glass-card rounded-2xl border border-obsidian-border overflow-hidden mt-6 flex flex-col">
         <div className="bg-obsidian-dark border-b border-obsidian-border p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">

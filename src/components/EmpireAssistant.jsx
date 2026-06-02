@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bot, X, Send, Sparkles, Mic, FileText, Command, Settings2 } from 'lucide-react'
+import { Bot, X, Send, Sparkles, FileText, Minimize2 } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 import { getAssistantResponse } from '../data/assistantData'
 import { addAuditLog } from '../utils/auditLogger'
 
 export default function EmpireAssistant({ open, onToggle }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: { bn: 'আসসালামু আলাইকুম বস। আমি Empire AI। সাহায্যের জন্য "আজকের রিপোর্ট বলো" চাপুন বা কমান্ড লিখুন।', en: 'Welcome! I am Empire AI. Click "Quick Report" or type a command.' } },
+    { role: 'assistant', text: 'আসসালামু আলাইকুম বস। আমি Empire AI। নিচে থেকে কমান্ড বেছে নিন অথবা লিখুন।' }
   ])
   const [input, setInput] = useState('')
-  const [lang, setLang] = useState('bn') // default to Bengali
   const [isTyping, setIsTyping] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [systemRisk, setSystemRisk] = useState('Safe')
@@ -17,18 +16,14 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [settings, setSettings] = useState({
     voiceOutput: true,
     autoVoiceBriefing: false,
+    monitorActive: false,
     quietMode: false,
     checkInterval: 300000,
     alertVoice: true,
     taskReminderVoice: true,
     healthWarningVoice: true,
+    agentEventVoice: true,
   })
-
-  const [monitorActive, setMonitorActive] = useState(false)
-  const [lastCheckedTime, setLastCheckedTime] = useState('Never')
-  const [lastVoiceAlertTime, setLastVoiceAlertTime] = useState('None')
-  const [firebaseError, setFirebaseError] = useState(false)
-  const [voiceStateMsg, setVoiceStateMsg] = useState('')
 
   const loadSettings = () => {
     try {
@@ -68,10 +63,7 @@ export default function EmpireAssistant({ open, onToggle }) {
     loadSettings()
 
     const handleLockdownConfirmed = () => {
-      setMonitorActive(false)
-      if (onToggle && open) {
-        onToggle()
-      }
+      if (onToggle && open) onToggle()
     }
     const handleSettingsUpdated = () => {
       loadSettings()
@@ -87,7 +79,7 @@ export default function EmpireAssistant({ open, onToggle }) {
   }, [open, onToggle])
 
   const speakAlert = (text) => {
-    if (!window.speechSynthesis) return
+    if (!window.speechSynthesis || settings.quietMode || !settings.voiceOutput) return
     const utterance = new SpeechSynthesisUtterance(text)
     const voices = window.speechSynthesis.getVoices()
     const bnVoice = voices.find(v => v.lang.includes('bn'))
@@ -109,135 +101,119 @@ export default function EmpireAssistant({ open, onToggle }) {
         storageAdapter.getWebsiteEvents()
       ])
       
-      setFirebaseError(false)
       const now = new Date()
-      setLastCheckedTime(now.toLocaleTimeString())
+      localStorage.setItem('km_empire_last_checked_at', now.toISOString())
 
       const activeAlerts = alerts.filter(a => a.status !== 'Fixed' && a.status !== 'Ignored')
       const criticalOrHighAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
-      const errorProjects = projects.filter(p => p.healthStatus === 'Error')
-      const pendingCriticalTasks = tasks.filter(t => t.status !== 'Done' && t.priority === 'Critical')
+      const errorProjects = projects.filter(p => p.healthStatus === 'Error' || p.healthStatus === 'Warning')
+      const pendingTasks = tasks.filter(t => t.status !== 'Done')
+      const pendingCriticalTasks = pendingTasks.filter(t => t.priority === 'Critical' || t.priority === 'High')
       const criticalEvents = (events || []).filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
 
-
-      let spokenData = {}
-      try {
-        spokenData = JSON.parse(localStorage.getItem('km_empire_spoken_alerts')) || {}
-      } catch { spokenData = {} }
-
-      let shouldSpeak = false
-      let msgWebsite = ''
+      let spokenAlerts = JSON.parse(localStorage.getItem('km_empire_spoken_alerts') || '{}')
+      let spokenEvents = JSON.parse(localStorage.getItem('km_empire_spoken_agent_events') || '{}')
       
+      let shouldSpeak = false
+      let textToSpeak = ''
+
+      // Check critical alerts
       for (const a of criticalOrHighAlerts) {
-        if (settings.alertVoice && !spokenData[`alert_${a.id}`]) {
+        if (settings.alertVoice && !spokenAlerts[a.id]) {
           shouldSpeak = true
-          spokenData[`alert_${a.id}`] = true
-          msgWebsite = a.projectName || ''
+          spokenAlerts[a.id] = true
+          textToSpeak = 'বস, গুরুত্বপূর্ণ সতর্কবার্তা আছে। আগে Alert Center check করুন।'
+          localStorage.setItem('km_empire_last_spoken_alert', `Alert: ${a.projectName}`)
           break
         }
       }
 
-      if (!shouldSpeak) {
-        for (const p of errorProjects) {
-          if (settings.healthWarningVoice && !spokenData[`proj_${p.id}`]) {
-            shouldSpeak = true
-            spokenData[`proj_${p.id}`] = true
-            msgWebsite = p.name || ''
-            break
-          }
-        }
-      }
-
+      // Check website agent events
       if (!shouldSpeak) {
         for (const e of criticalEvents) {
-          if (settings.alertVoice && !spokenData[`agent_event_${e.id}`]) {
+          if (settings.agentEventVoice && !spokenEvents[e.id]) {
             shouldSpeak = true
-            spokenData[`agent_event_${e.id}`] = true
-            msgWebsite = e.websiteName || 'Website Agent'
+            spokenEvents[e.id] = true
+            textToSpeak = 'বস, connected website থেকে নতুন high priority event এসেছে। Website Agent page check করুন।'
+            localStorage.setItem('km_empire_last_spoken_alert', `Event: ${e.websiteName}`)
             break
           }
         }
       }
 
+      // Check health
       if (!shouldSpeak) {
-        for (const t of pendingCriticalTasks) {
-          if (settings.taskReminderVoice && !spokenData[`task_${t.id}`]) {
+        for (const p of errorProjects) {
+          if (settings.healthWarningVoice && !spokenAlerts[`health_${p.id}`]) {
             shouldSpeak = true
-            spokenData[`task_${t.id}`] = true
+            spokenAlerts[`health_${p.id}`] = true
+            textToSpeak = `বস, ${p.name} ওয়েবসাইটে সমস্যা আছে। দয়া করে Health চেক করুন।`
+            localStorage.setItem('km_empire_last_spoken_alert', `Health: ${p.name}`)
             break
           }
+        }
+      }
+
+      // Check tasks
+      if (!shouldSpeak) {
+        for (const t of pendingCriticalTasks) {
+          if (settings.taskReminderVoice && !spokenAlerts[`task_${t.id}`]) {
+            shouldSpeak = true
+            spokenAlerts[`task_${t.id}`] = true
+            textToSpeak = 'বস, গুরুত্বপূর্ণ কাজ বাকি আছে। Tasks প্যানেল দেখুন।'
+            localStorage.setItem('km_empire_last_spoken_alert', `Task: Urgent Task Pending`)
+            break
+          }
+        }
+      }
+
+      // Check auto briefing
+      if (!shouldSpeak && settings.autoVoiceBriefing) {
+        const lastBriefing = localStorage.getItem('km_empire_last_briefing_at')
+        // Brief once every 1 hour (3600000ms) or if never
+        if (!lastBriefing || (now.getTime() - new Date(lastBriefing).getTime() > 3600000)) {
+          shouldSpeak = true
+          textToSpeak = `আসসালামু আলাইকুম বস। বর্তমান অবস্থা বলছি। আপনার ${activeAlerts.length}টি alert আছে, ${pendingTasks.length}টি task pending আছে, এবং ${projects.length}টি website monitor হচ্ছে। আগে critical alert check করা ভালো। আল্লাহ ভরসা, ধীরে ধীরে এগোবো।`
+          localStorage.setItem('km_empire_last_briefing_at', now.toISOString())
+          localStorage.setItem('km_empire_last_spoken_alert', 'Routine Briefing')
         }
       }
 
       if (shouldSpeak) {
-        localStorage.setItem('km_empire_spoken_alerts', JSON.stringify(spokenData))
-        
-        let textToSpeak = 'আসসালামু আলাইকুম বস। একটি গুরুত্বপূর্ণ সতর্কবার্তা আছে। আগে Alert Center চেক করুন।'
-        if (msgWebsite) {
-          textToSpeak += ` ${msgWebsite}-এ সমস্যা দেখা গেছে।`
-        }
-        textToSpeak += ' আল্লাহ ভরসা, ধীরে ধীরে নিরাপদভাবে এগোবো।'
-        
+        localStorage.setItem('km_empire_spoken_alerts', JSON.stringify(spokenAlerts))
+        localStorage.setItem('km_empire_spoken_agent_events', JSON.stringify(spokenEvents))
+        localStorage.setItem('km_empire_last_voice_report_at', now.toISOString())
         speakAlert(textToSpeak)
-        setLastVoiceAlertTime(now.toLocaleTimeString())
+        window.dispatchEvent(new Event('assistant_settings_updated')) // update UI trackers
       }
 
     } catch (err) {
-      setFirebaseError(true)
-      const now = new Date()
-      setLastCheckedTime(now.toLocaleTimeString())
-      
-      let spokenData = {}
-      try { spokenData = JSON.parse(localStorage.getItem('km_empire_spoken_alerts')) || {} } catch {}
-      
-      if (!spokenData['firebase_error']) {
-        spokenData['firebase_error'] = true
-        localStorage.setItem('km_empire_spoken_alerts', JSON.stringify(spokenData))
-        speakAlert('Firebase unavailable. Local fallback active.')
-        setLastVoiceAlertTime(now.toLocaleTimeString())
-      }
+      console.error(err)
     }
   }
 
+  // Effect to trigger check ONLY if Monitor is ON, and clear it otherwise.
   useEffect(() => {
     let intervalId
-    if (monitorActive && !settings.quietMode) {
-      intervalId = setInterval(runProactiveCheck, settings.checkInterval)
+    if (settings.monitorActive) {
+      // Run once immediately on start
+      runProactiveCheck()
+      intervalId = setInterval(runProactiveCheck, settings.checkInterval || 300000)
     }
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [monitorActive, settings.checkInterval, settings.quietMode])
+  }, [settings.monitorActive, settings.checkInterval])
 
+  // Custom Event listener to test briefing
   useEffect(() => {
-    const handleKeyDownGlobally = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-      if (e.ctrlKey && e.shiftKey) {
-        switch(e.key.toLowerCase()) {
-          case 'r':
-            e.preventDefault()
-            handleSend(lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report')
-            break
-          case 's':
-            e.preventDefault()
-            handleSend('Security check করো')
-            break
-          case 'n':
-            e.preventDefault()
-            handleSend('Next কাজ বলো')
-            break
-          case 'l':
-            e.preventDefault()
-            window.dispatchEvent(new Event('trigger_lockdown'))
-            break
-        }
-      }
+    const handleTestBriefing = () => {
+       const text = "আসসালামু আলাইকুম বস। এটি একটি টেস্ট ব্রিফিং। আপনার সিস্টেম সম্পূর্ণ প্রস্তুত।"
+       speakAlert(text)
     }
-
-    window.addEventListener('keydown', handleKeyDownGlobally)
-    return () => window.removeEventListener('keydown', handleKeyDownGlobally)
-  }, [lang])
+    window.addEventListener('test_auto_briefing', handleTestBriefing)
+    return () => window.removeEventListener('test_auto_briefing', handleTestBriefing)
+  }, [settings.quietMode, settings.voiceOutput])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -258,16 +234,8 @@ export default function EmpireAssistant({ open, onToggle }) {
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'High' || a.severity === 'Critical')
       const criticalEvents = (events || []).filter(e => (e.severity === 'Critical' || e.severity === 'High') && new Date(e.createdAt) > new Date(Date.now() - 24*60*60*1000))
       
-      const warningProjects = projects.filter(p => {
-        const pAlerts = activeAlerts.filter(a => a.projectId === p.id)
-        const hasCritical = pAlerts.some(a => a.severity === 'Critical')
-        return hasCritical || p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown'
-      })
-      const healthyProjects = projects.filter(p => {
-        const pAlerts = activeAlerts.filter(a => a.projectId === p.id)
-        const hasCritical = pAlerts.some(a => a.severity === 'Critical')
-        return p.healthStatus === 'Healthy' && !hasCritical
-      })
+      const warningProjects = projects.filter(p => p.healthStatus === 'Warning' || p.healthStatus === 'Error' || p.healthStatus === 'Unknown')
+      const healthyProjects = projects.filter(p => p.healthStatus === 'Healthy')
 
       let priorities = []
       if (criticalAlerts.length > 0) priorities.push('• Fix Critical/High alerts first')
@@ -289,8 +257,12 @@ export default function EmpireAssistant({ open, onToggle }) {
       let bnText = `আসসালামু আলাইকুম বস।\n\n`
       bnText += `📊 Overall Status: ${systemRisk}\n\n`
       
-      bnText += `🌐 Website Health Summary:\n`
-      bnText += `Healthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
+      if (projects.length === 0) {
+          bnText += `🌐 Projects: কোনো data পাওয়া যায়নি।\n`
+      } else {
+          bnText += `🌐 Website Health Summary:\n`
+          bnText += `Healthy: ${healthyProjects.length}, Warning/Error/Unknown: ${warningProjects.length}\n\n`
+      }
 
       if (criticalAlerts.length > 0) {
         bnText += `🚨 Critical/High Alerts: ${criticalAlerts.length}টি আছে। দয়া করে Alert Center দেখুন।\n\n`
@@ -312,23 +284,23 @@ export default function EmpireAssistant({ open, onToggle }) {
       }
 
       bnText += `🎯 Top Recommended Actions:\n`
-      priorities.forEach(p => bnText += `${p}\n`)
+      if (priorities.length > 0) {
+         priorities.forEach(p => bnText += `${p}\n`)
+      } else {
+         bnText += `• কোনো urgent কাজ নেই।\n`
+      }
       bnText += `\n`
 
       bnText += `🛑 Safe Action Rules (Reminder):\n`
       bnText += `• No API key/token/password in frontend/GitHub\n`
       bnText += `• Backup before delete/migration\n`
-      bnText += `• Owner approval before risky action\n`
-      bnText += `• Real API only through backend/serverless later\n`
       bnText += `• Mock features should be clearly called mock/manual\n\n`
 
       bnText += `✨ আল্লাহ ভরসা, ধীরে ধীরে নিরাপদভাবে এগোবো।`
 
-      let enText = `System Report generated successfully. Alerts: ${activeAlerts.length}, Pending Tasks: ${pendingTasks.length}. (Please switch to Bengali for detailed AI tone).`
-
-      return { bn: bnText, en: enText }
+      return bnText
     } catch (err) {
-      return { bn: 'Firebase unavailable. Local fallback active.', en: 'Firebase unavailable. Local fallback active.' }
+      return 'Firebase unavailable. Local fallback active.'
     }
   }
 
@@ -341,43 +313,31 @@ export default function EmpireAssistant({ open, onToggle }) {
     setIsTyping(true)
 
     const cmd = userMsg.toLowerCase().trim()
-    const reportCommands = ['আজকের রিপোর্ট বলো', 'রিপোর্ট বলো', 'report', 'quick report', 'আজকের রিপোর্ট']
     
-    if (reportCommands.includes(cmd)) {
+    if (cmd === 'আজকের রিপোর্ট') {
       const report = await generateReport()
       setMessages(prev => [...prev, { role: 'assistant', text: report }])
       addAuditLog('quick_report_generated', 'success', 'assistant', 'Generated quick report')
+      if (settings.voiceOutput && !settings.quietMode) {
+          const textToSpeak = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। বিস্তারিত রিপোর্ট স্ক্রিনে দেওয়া হলো।`
+          speakAlert(textToSpeak)
+      }
       setIsTyping(false)
       return
     }
 
-    if (cmd === 'এই পেজে কী করব?') {
-      const txt = 'বর্তমানে আপনি যে পেজে আছেন, সেখানে mock features থাকতে পারে। রিয়েল API কানেক্ট করার আগে কোনো গোপন তথ্য দেবেন না এবং Backup নিয়ে কাজ করবেন।\n\nMock features should be clearly called mock/manual.'
-      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
-      setIsTyping(false)
-      return
-    }
-
-    if (cmd === 'security check করো') {
+    if (cmd === 'নিরাপত্তা চেক') {
       const txt = 'Security Check Report:\n• No API key/token/password in frontend/GitHub\n• Firebase Web SDK only uses public config\n• Firestore Rules block unauthorized writes\n• Local Storage is acting as fallback\n\nOverall: Safe Mode Active.'
-      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      setMessages(prev => [...prev, { role: 'assistant', text: txt }])
       addAuditLog('security_check_requested', 'success', 'assistant', 'Security check completed')
       setIsTyping(false)
       return
     }
 
-    if (cmd === 'next কাজ বলো') {
+    if (cmd === 'পরের কাজ') {
       const txt = 'Recommended Next Safe Action:\n১. প্রথমে Alerts প্যানেল চেক করে Critical issue থাকলে ফিক্স করুন।\n২. Task list থেকে Urgent কাজ শেষ করুন।\n৩. নতুন কোনো update দেওয়ার আগে Data Export (Backup) করে নিন।'
-      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
+      setMessages(prev => [...prev, { role: 'assistant', text: txt }])
       addAuditLog('next_action_requested', 'success', 'assistant', 'Provided next action recommendations')
-      setIsTyping(false)
-      return
-    }
-
-    if (cmd === 'short voice report') {
-      const txt = `আসসালামু আলাইকুম। আপনার এম্পায়ার সিস্টেমটি এখন ${systemRisk} অবস্থায় আছে। আজকে কিছু টাস্ক এবং অ্যালার্ট পেন্ডিং আছে। রিয়েল এপিআই ব্যবহার অ্যাকাউন্টে যুক্ত না করে মক মোডে কাজ করুন। আল্লাহ ভরসা, নিরাপদভাবে এগিয়ে যান।`
-      setMessages(prev => [...prev, { role: 'assistant', text: { bn: txt, en: txt } }])
-      addAuditLog('short_voice_report_generated', 'success', 'assistant', 'Generated short voice report')
       setIsTyping(false)
       return
     }
@@ -385,7 +345,8 @@ export default function EmpireAssistant({ open, onToggle }) {
     // Default static fallback for other commands
     setTimeout(() => {
       const response = getAssistantResponse(userMsg)
-      setMessages(prev => [...prev, { role: 'assistant', text: response }])
+      const resText = typeof response === 'object' ? (response.bn || response.en) : response
+      setMessages(prev => [...prev, { role: 'assistant', text: resText }])
       setIsTyping(false)
     }, 400)
   }
@@ -395,69 +356,6 @@ export default function EmpireAssistant({ open, onToggle }) {
       e.preventDefault()
       handleSend()
     }
-  }
-
-  const handleVoice = () => {
-    if (!settings.voiceOutput) {
-      setVoiceStateMsg('Voice output is disabled in settings')
-      setTimeout(() => setVoiceStateMsg(''), 3000)
-      return
-    }
-    if (!window.speechSynthesis) {
-      setVoiceStateMsg('Voice not supported on this browser')
-      return
-    }
-
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel()
-      setIsSpeaking(false)
-      setVoiceStateMsg('Voice stopped')
-      addAuditLog('voice_stopped', 'success', 'assistant', 'User stopped voice synthesis manually')
-      setTimeout(() => setVoiceStateMsg(''), 3000)
-      return
-    }
-
-    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant')
-    if (!lastAssistantMsg) return
-    
-    let textToSpeak = typeof lastAssistantMsg.text === 'object' ? (lastAssistantMsg.text[lang] || lastAssistantMsg.text.bn || lastAssistantMsg.text.en) : lastAssistantMsg.text
-    
-    // Clean text for speech
-    textToSpeak = textToSpeak.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-    textToSpeak = textToSpeak.replace(/\*/g, '')
-    
-    const utterance = new SpeechSynthesisUtterance(textToSpeak)
-    
-    const voices = window.speechSynthesis.getVoices()
-    const bnVoice = voices.find(v => v.lang.includes('bn'))
-    
-    if (bnVoice) {
-      utterance.voice = bnVoice
-      utterance.lang = bnVoice.lang
-    } else {
-      utterance.lang = 'bn-BD'
-      if (!messages.some(m => m.text === 'বাংলা voice আপনার browser/device-এ পাওয়া যায়নি, default voice ব্যবহার হচ্ছে।')) {
-        setMessages(prev => [...prev, { role: 'assistant', text: 'বাংলা voice আপনার browser/device-এ পাওয়া যায়নি, default voice ব্যবহার হচ্ছে।' }])
-      }
-    }
-    
-    utterance.onstart = () => {
-      setIsSpeaking(true)
-      setVoiceStateMsg('Reading report...')
-      addAuditLog('voice_played', 'success', 'assistant', 'Voice synthesis started')
-    }
-    utterance.onend = () => {
-      setIsSpeaking(false)
-      setVoiceStateMsg('Voice stopped')
-      setTimeout(() => setVoiceStateMsg(''), 3000)
-    }
-    utterance.onerror = () => {
-      setIsSpeaking(false)
-      setVoiceStateMsg('Voice stopped')
-      setTimeout(() => setVoiceStateMsg(''), 3000)
-    }
-    
-    window.speechSynthesis.speak(utterance)
   }
 
   return (
@@ -474,7 +372,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       {/* Assistant Panel */}
       {open && (
-        <div className="fixed bottom-[90px] md:bottom-[110px] right-3 md:right-6 z-[9999] w-[calc(100vw-24px)] md:w-[360px] h-[500px] max-h-[70vh] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
+        <div className="fixed bottom-[90px] md:bottom-[110px] right-3 md:right-6 z-[9999] w-[calc(100vw-24px)] md:w-[380px] h-[550px] max-h-[75vh] md:max-h-[70vh] glass-panel rounded-2xl flex flex-col shadow-2xl border border-gold/10 animate-slide-up">
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gold/10 bg-obsidian-dark/50 rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -493,42 +391,20 @@ export default function EmpireAssistant({ open, onToggle }) {
                     {systemRisk}
                   </span>
                 </div>
-                <p className="text-[10px] text-obsidian-muted">Control Room Manager</p>
+                <a href="/assistant-settings" className="text-[10px] text-gold hover:underline">
+                  Assistant Settings
+                </a>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href="/assistant-settings"
-                className="px-2 py-1 text-[10px] font-bold rounded-md bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:bg-obsidian-card transition-colors flex items-center gap-1"
-              >
-                <Settings2 className="w-3 h-3" />
-                Settings
-              </a>
-              <button
-                onClick={() => {
-                  const newStatus = !monitorActive
-                  setMonitorActive(newStatus)
-                  if (newStatus) {
-                    addAuditLog('proactive_monitor_enabled', 'success', 'owner_manual', 'Voice monitor turned ON')
-                    runProactiveCheck()
-                  } else {
-                    addAuditLog('proactive_monitor_disabled', 'success', 'owner_manual', 'Voice monitor turned OFF')
-                  }
-                }}
-                className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${
-                  monitorActive ? 'bg-status-live/10 text-status-live border border-status-live/20' : 'bg-obsidian-dark text-obsidian-muted border border-obsidian-border hover:bg-obsidian-card'
-                }`}
-              >
-                {monitorActive ? 'Monitor Active' : 'Monitor Off'}
-              </button>
-              <button onClick={onToggle} className="text-obsidian-muted hover:text-white transition-colors ml-1 p-1" title="Close">
-                <X className="w-5 h-5" />
+              <button onClick={onToggle} className="text-obsidian-muted hover:text-white transition-colors p-1" title="Minimize">
+                <Minimize2 className="w-5 h-5" />
               </button>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden scroll-smooth">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
@@ -538,11 +414,7 @@ export default function EmpireAssistant({ open, onToggle }) {
                       : 'bg-obsidian-card border border-obsidian-border text-obsidian-text rounded-bl-sm shadow-lg'
                   }`}
                 >
-                  {msg.role === 'assistant' && typeof msg.text === 'object'
-                    ? msg.text[lang]
-                    : msg.role === 'user'
-                    ? msg.text
-                    : (msg.text[lang] || msg.text)}
+                  {msg.text}
                 </div>
               </div>
             ))}
@@ -558,59 +430,27 @@ export default function EmpireAssistant({ open, onToggle }) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Actions (Moved Below Messages) */}
-          <div className="shrink-0 px-4 py-3 border-t border-gold/5 flex flex-wrap gap-2 bg-obsidian-dark/40 shadow-inner">
+          {/* Clean Quick Chips */}
+          <div className="shrink-0 px-4 py-3 flex flex-wrap gap-2 bg-obsidian-dark/40 shadow-inner justify-center">
             <button 
-              onClick={() => handleSend(lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-gold hover:border-gold/30 transition-colors whitespace-nowrap"
+              onClick={() => handleSend('আজকের রিপোর্ট')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-gold/20 text-xs text-gold hover:bg-gold/10 transition-colors"
             >
-              <FileText className="w-3.5 h-3.5" />
-              {lang === 'bn' ? 'আজকের রিপোর্ট বলো' : 'Quick Report'}
+              আজকের রিপোর্ট
             </button>
-            <div className="relative group flex items-center">
-              <button 
-                onClick={handleVoice}
-                disabled={messages.length <= 1}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap transition-colors ${
-                  messages.length <= 1
-                    ? 'bg-obsidian-dark text-obsidian-muted border-obsidian-border/50 cursor-not-allowed'
-                    : isSpeaking 
-                    ? 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
-                    : 'bg-obsidian-card text-obsidian-muted border-obsidian-border hover:text-white'
-                }`}
-              >
-                {isSpeaking ? (
-                  <>⏹ {lang === 'bn' ? 'বন্ধ করুন' : 'Stop'}</>
-                ) : (
-                  <>🔊 {lang === 'bn' ? 'রিপোর্ট শুনুন' : 'Listen Report'}</>
-                )}
-              </button>
-              {messages.length <= 1 && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max opacity-0 group-hover:opacity-100 transition-opacity bg-obsidian-dark text-white text-[10px] px-2 py-1 rounded border border-obsidian-border pointer-events-none z-10">
-                  আগে Quick Report তৈরি করুন.
-                </div>
-              )}
-            </div>
-            <button onClick={() => handleSend('এই পেজে কী করব?')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
-              এই পেজে কী করব?
+            <button 
+              onClick={() => handleSend('নিরাপত্তা চেক')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
+            >
+              নিরাপত্তা চেক
             </button>
-            <button onClick={() => handleSend('Security check করো')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
-              Security check করো
-            </button>
-            <button onClick={() => handleSend('Next কাজ বলো')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
-              Next কাজ বলো
-            </button>
-            <button onClick={() => handleSend('Short voice report')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors whitespace-nowrap">
-              Short voice report
+            <button 
+              onClick={() => handleSend('পরের কাজ')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-card border border-obsidian-border text-xs text-obsidian-muted hover:text-white transition-colors"
+            >
+              পরের কাজ
             </button>
           </div>
-
-          {/* Voice State Feedback */}
-          {voiceStateMsg && (
-            <div className="shrink-0 px-5 py-1.5 bg-obsidian-dark text-[10px] text-gold text-center border-t border-gold/5 font-medium animate-pulse">
-              {voiceStateMsg}
-            </div>
-          )}
 
           {/* Input */}
           <div className="shrink-0 p-4 border-t border-gold/10 bg-obsidian-dark/50 rounded-b-2xl pb-4">
@@ -619,13 +459,13 @@ export default function EmpireAssistant({ open, onToggle }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={lang === 'bn' ? 'কমান্ড লিখুন...' : 'Type a command...'}
+                placeholder="কমান্ড লিখুন..."
                 className="flex-1 bg-obsidian-card border border-obsidian-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-obsidian-muted focus:outline-none focus:border-gold/30 transition-colors"
                 disabled={isTyping}
               />
               <button
                 onClick={() => handleSend()}
-                disabled={isTyping}
+                disabled={isTyping || !input.trim()}
                 className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-all disabled:opacity-50"
               >
                 <Send className="w-4 h-4 text-obsidian-dark" />
