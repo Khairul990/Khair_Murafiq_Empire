@@ -376,6 +376,15 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
   }
 
+  const getBadgeData = (risk) => {
+    if (risk === 'Need Review') return { label: 'Check Needed', tooltip: 'কিছু alert/task/website health check দরকার' }
+    if (risk === 'Safe') return { label: 'Safe', tooltip: 'সব ঠিক আছে' }
+    if (risk === 'Warning') return { label: 'Warning', tooltip: 'কিছু সতর্কতা আছে' }
+    if (risk === 'Critical') return { label: 'Critical', tooltip: 'জরুরি সমস্যা আছে' }
+    return { label: risk, tooltip: risk }
+  }
+  const badgeData = getBadgeData(systemRisk)
+
   return (
     <>
       {/* Floating Button */}
@@ -400,13 +409,15 @@ export default function EmpireAssistant({ open, onToggle }) {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-white font-bold text-sm">Empire AI</h3>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border uppercase ${
+                  <span 
+                    title={badgeData.tooltip}
+                    className={`px-1.5 py-0.5 rounded text-[8px] font-bold border uppercase cursor-help ${
                     systemRisk === 'Critical' ? 'bg-status-error/10 text-status-error border-status-error/30' :
                     systemRisk === 'Warning' ? 'bg-status-warning/10 text-status-warning border-status-warning/30' :
                     systemRisk === 'Need Review' ? 'bg-status-dev/10 text-status-dev border-status-dev/30' :
                     'bg-status-live/10 text-status-live border-status-live/30'
                   }`}>
-                    {systemRisk}
+                    {badgeData.label}
                   </span>
                 </div>
                 <a href="/assistant-settings" className="text-[10px] text-gold hover:underline">
