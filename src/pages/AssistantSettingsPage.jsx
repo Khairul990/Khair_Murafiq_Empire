@@ -98,6 +98,11 @@ export default function AssistantSettingsPage() {
       utterance.lang = 'bn-BD'
     }
     
+    // Custom voice settings for the Majestic Voice Persona
+    utterance.pitch = 0.8;
+    utterance.rate = 0.9;
+    utterance.volume = 1;
+    
     utterance.onstart = () => setIsTestPlaying(true)
     utterance.onend = () => setIsTestPlaying(false)
     utterance.onerror = () => setIsTestPlaying(false)

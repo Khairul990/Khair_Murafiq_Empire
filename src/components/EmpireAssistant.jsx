@@ -89,6 +89,12 @@ export default function EmpireAssistant({ open, onToggle }) {
     } else {
       utterance.lang = 'bn-BD'
     }
+    
+    // Custom voice settings for the Majestic Voice Persona
+    utterance.pitch = 0.8;
+    utterance.rate = 0.9;
+    utterance.volume = 1;
+    
     window.speechSynthesis.speak(utterance)
   }
 
