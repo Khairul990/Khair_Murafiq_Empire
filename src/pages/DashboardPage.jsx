@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   FolderKanban, Globe, AlertTriangle, ListChecks,
-  DollarSign, Activity, ShieldCheck, Loader2, Radar, Server, Heart, CloudOff
+  DollarSign, Activity, ShieldCheck, Loader2, Radar, Server, Heart, CloudOff, Crown
 } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 
