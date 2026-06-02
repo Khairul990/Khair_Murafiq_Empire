@@ -3,6 +3,7 @@ import { Bot, X, Send, Sparkles, FileText, Minimize2 } from 'lucide-react'
 import { storageAdapter } from '../services/storageAdapter'
 import { getAssistantResponse } from '../data/assistantData'
 import { addAuditLog } from '../utils/auditLogger'
+import { requestElevenLabsVoice } from '../services/apiGatewayClient'
 
 export default function EmpireAssistant({ open, onToggle }) {
   const [messages, setMessages] = useState([
@@ -17,6 +18,7 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const [settings, setSettings] = useState({
     voiceOutput: true,
+    premiumVoiceEnabled: false,
     autoVoiceBriefing: false,
     monitorActive: false,
     quietMode: false,
@@ -86,8 +88,8 @@ export default function EmpireAssistant({ open, onToggle }) {
     }
   }, [open, onToggle])
 
-  const speakAlert = (text) => {
-    if (!window.speechSynthesis || settings.quietMode || !settings.voiceOutput) return
+  const speakAlert = async (text) => {
+    if (settings.quietMode || !settings.voiceOutput) return
 
     const nowTime = Date.now()
     const lastSpoken = localStorage.getItem('km_empire_last_spoken_text')
@@ -98,11 +100,37 @@ export default function EmpireAssistant({ open, onToggle }) {
       return
     }
 
-    // Cancel previous speech to clear queue and improve reliability
-    window.speechSynthesis.cancel()
-
     localStorage.setItem('km_empire_last_spoken_text', text)
     localStorage.setItem('km_empire_last_spoken_time', nowTime.toString())
+
+    if (window.speechSynthesis) window.speechSynthesis.cancel()
+
+    if (settings.premiumVoiceEnabled) {
+      try {
+        setActiveVoiceName('Loading Premium Voice...')
+        const res = await requestElevenLabsVoice(text)
+        if (res.ok && res.audioBase64) {
+          const audio = new Audio(`data:audio/mp3;base64,${res.audioBase64}`)
+          audio.onplay = () => setActiveVoiceName('ElevenLabs Premium Voice')
+          audio.onerror = () => {
+             setActiveVoiceName('Premium Failed - Using Browser (BN)')
+             speakWithBrowser(text)
+          }
+          audio.play()
+          return
+        } else {
+          setActiveVoiceName('Premium Failed - Using Browser (BN)')
+        }
+      } catch (err) {
+        setActiveVoiceName('Premium Failed - Using Browser (BN)')
+      }
+    }
+
+    speakWithBrowser(text)
+  }
+
+  const speakWithBrowser = (text) => {
+    if (!window.speechSynthesis) return
 
     const utterance = new SpeechSynthesisUtterance(text)
     const voices = window.speechSynthesis.getVoices()
@@ -111,10 +139,10 @@ export default function EmpireAssistant({ open, onToggle }) {
     if (bnVoice) {
       utterance.voice = bnVoice
       utterance.lang = bnVoice.lang || 'bn-BD'
-      setActiveVoiceName(bnVoice.name)
+      if (!settings.premiumVoiceEnabled) setActiveVoiceName(bnVoice.name)
     } else {
       utterance.lang = 'bn-BD'
-      setActiveVoiceName('Browser Default (BN)')
+      if (!settings.premiumVoiceEnabled) setActiveVoiceName('Browser Default (BN)')
     }
     
     // Custom voice settings for the Majestic Voice Persona

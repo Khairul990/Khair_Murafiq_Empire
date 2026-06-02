@@ -3,8 +3,11 @@ import { motion } from 'framer-motion'
 import { Bot, Settings2, ShieldAlert, Volume2, BellRing, Command, FileText, CheckCircle, MicOff, RefreshCw, Trash2, VolumeX, Activity } from 'lucide-react'
 import { getAuditLogs, clearAuditLogs, addAuditLog } from '../utils/auditLogger'
 
+import { requestElevenLabsVoice } from '../services/apiGatewayClient'
+
 const defaultSettings = {
   voiceOutput: true,
+  premiumVoiceEnabled: false,
   autoVoiceBriefing: false,
   monitorActive: false,
   quietMode: false,
@@ -90,10 +93,11 @@ export default function AssistantSettingsPage() {
     }
     const utterance = new SpeechSynthesisUtterance('আসসালামু আলাইকুম। আমি এম্পায়ার এআই। আপনার সিস্টেম কাজ করছে।')
     const voices = window.speechSynthesis.getVoices()
-    const bnVoice = voices.find(v => v.lang.includes('bn'))
+    let bnVoice = voices.find(v => v.lang.includes('bn') || v.lang.includes('bn-IN') || v.lang.includes('bn-BD'))
+    if (!bnVoice) bnVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Microsoft'))
     if (bnVoice) {
       utterance.voice = bnVoice
-      utterance.lang = bnVoice.lang
+      utterance.lang = bnVoice.lang || 'bn-BD'
     } else {
       utterance.lang = 'bn-BD'
     }
@@ -108,6 +112,26 @@ export default function AssistantSettingsPage() {
     utterance.onerror = () => setIsTestPlaying(false)
 
     window.speechSynthesis.speak(utterance)
+  }
+
+  const handleTestPremiumVoice = async () => {
+    if (isTestPlaying) return
+    setIsTestPlaying(true)
+    try {
+      const res = await requestElevenLabsVoice('আসসালামু আলাইকুম। আমি এম্পায়ার এআই এর প্রিমিয়াম ভয়েস।')
+      if (res.ok && res.audioBase64) {
+        const audio = new Audio(`data:audio/mp3;base64,${res.audioBase64}`)
+        audio.onended = () => setIsTestPlaying(false)
+        audio.onerror = () => setIsTestPlaying(false)
+        audio.play()
+      } else {
+        alert('Premium voice failed: ' + res.message)
+        setIsTestPlaying(false)
+      }
+    } catch (e) {
+      alert('Error testing voice: ' + e.message)
+      setIsTestPlaying(false)
+    }
   }
 
   const handleTestBriefing = () => {
@@ -160,7 +184,7 @@ export default function AssistantSettingsPage() {
             <div className="flex justify-between items-center text-xs">
               <span className="text-obsidian-muted">Voice Output Engine:</span>
               <span className="text-white font-bold bg-obsidian-dark px-2 py-1 rounded flex items-center gap-1">
-                 Browser SpeechSynthesis
+                 {settings.premiumVoiceEnabled ? 'Premium Serverless Voice' : 'Browser SpeechSynthesis'}
               </span>
             </div>
           </div>
@@ -216,6 +240,32 @@ export default function AssistantSettingsPage() {
               <span className="text-xs text-status-warning font-bold group-hover:text-status-warning/80 transition-colors">Quiet Mode (Mute All)</span>
               <input type="checkbox" checked={settings.quietMode} onChange={(e) => updateSetting('quietMode', e.target.checked)} className="accent-status-warning w-4 h-4 cursor-pointer" />
             </label>
+
+            <div className="border-t border-obsidian-border/50 pt-3 mt-3">
+              <label className="flex items-center justify-between cursor-pointer group mb-2">
+                <span className="text-xs text-obsidian-text group-hover:text-white transition-colors flex items-center gap-1">
+                  Premium Voice <span className="text-[8px] bg-gold/20 text-gold px-1 rounded">BETA</span>
+                </span>
+                <input type="checkbox" checked={settings.premiumVoiceEnabled} onChange={(e) => updateSetting('premiumVoiceEnabled', e.target.checked)} className="accent-gold w-4 h-4 cursor-pointer" />
+              </label>
+              
+              <div className="bg-obsidian-dark p-3 rounded-lg border border-gold/30 mt-2 mb-3">
+                <p className="text-[10px] text-obsidian-muted flex items-start gap-1.5 leading-tight">
+                  <ShieldAlert className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
+                  ElevenLabs API key is stored only in Vercel Environment Variables, never in frontend.
+                </p>
+                {settings.premiumVoiceEnabled && (
+                  <button
+                    onClick={handleTestPremiumVoice}
+                    disabled={isTestPlaying}
+                    className="mt-2 w-full px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border flex justify-center items-center gap-1 bg-gold/10 text-gold border-gold/30 hover:bg-gold/20 disabled:opacity-50"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    Test Premium Voice
+                  </button>
+                )}
+              </div>
+            </div>
             
             <div className="border-t border-obsidian-border/50 pt-3 mt-3">
                <label className="flex items-center justify-between cursor-pointer group mb-3">
