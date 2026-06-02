@@ -12,6 +12,8 @@ export default function EmpireAssistant({ open, onToggle }) {
   const [isTyping, setIsTyping] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [systemRisk, setSystemRisk] = useState('Safe')
+  const [activeVoiceName, setActiveVoiceName] = useState('')
+  const [audioBlockedWarning, setAudioBlockedWarning] = useState(false)
 
   const [settings, setSettings] = useState({
     voiceOutput: true,
@@ -56,8 +58,14 @@ export default function EmpireAssistant({ open, onToggle }) {
   }
 
   useEffect(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.getVoices()
+    const loadVoices = () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices()
+      }
+    }
+    loadVoices()
+    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices
     }
     loadRisk()
     loadSettings()
@@ -80,14 +88,33 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const speakAlert = (text) => {
     if (!window.speechSynthesis || settings.quietMode || !settings.voiceOutput) return
+
+    const nowTime = Date.now()
+    const lastSpoken = localStorage.getItem('km_empire_last_spoken_text')
+    const lastSpokenTime = localStorage.getItem('km_empire_last_spoken_time')
+    
+    // Prevent repeating identical message within 10 seconds
+    if (lastSpoken === text && lastSpokenTime && (nowTime - Number(lastSpokenTime) < 10000)) {
+      return
+    }
+
+    // Cancel previous speech to clear queue and improve reliability
+    window.speechSynthesis.cancel()
+
+    localStorage.setItem('km_empire_last_spoken_text', text)
+    localStorage.setItem('km_empire_last_spoken_time', nowTime.toString())
+
     const utterance = new SpeechSynthesisUtterance(text)
     const voices = window.speechSynthesis.getVoices()
-    const bnVoice = voices.find(v => v.lang.includes('bn'))
+    let bnVoice = voices.find(v => v.lang.includes('bn') || v.lang.includes('bn-IN') || v.lang.includes('bn-BD'))
+    
     if (bnVoice) {
       utterance.voice = bnVoice
-      utterance.lang = bnVoice.lang
+      utterance.lang = bnVoice.lang || 'bn-BD'
+      setActiveVoiceName(bnVoice.name)
     } else {
       utterance.lang = 'bn-BD'
+      setActiveVoiceName('Browser Default (BN)')
     }
     
     // Custom voice settings for the Majestic Voice Persona
@@ -95,6 +122,16 @@ export default function EmpireAssistant({ open, onToggle }) {
     utterance.rate = 0.9;
     utterance.volume = 1;
     
+    utterance.onerror = (e) => {
+      if (e.error === 'not-allowed') {
+        setAudioBlockedWarning(true)
+      }
+    }
+
+    utterance.onstart = () => {
+      setAudioBlockedWarning(false)
+    }
+
     window.speechSynthesis.speak(utterance)
   }
 
@@ -442,9 +479,16 @@ export default function EmpireAssistant({ open, onToggle }) {
                     {badgeData.label}
                   </span>
                 </div>
-                <a href="/assistant-settings" className="text-[10px] text-gold hover:underline">
-                  Assistant Settings
-                </a>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <a href="/assistant-settings" className="text-[10px] text-gold hover:underline">
+                    Assistant Settings
+                  </a>
+                  {activeVoiceName && (
+                    <span className="text-[9px] text-obsidian-muted px-1.5 py-0.5 rounded bg-obsidian-dark/50 border border-obsidian-border whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" title={`Voice: ${activeVoiceName}`}>
+                      🎙️ {activeVoiceName}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -453,6 +497,13 @@ export default function EmpireAssistant({ open, onToggle }) {
               </button>
             </div>
           </div>
+
+          {audioBlockedWarning && (
+            <div className="shrink-0 bg-status-error/10 border-b border-status-error/30 px-4 py-2 text-xs text-status-error flex justify-between items-center">
+              <span>Voice blocked. Please click anywhere to allow audio.</span>
+              <button onClick={() => setAudioBlockedWarning(false)} className="text-status-error hover:text-white p-1">✕</button>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 empire-scrollbar bg-obsidian-dark/20 overflow-x-hidden scroll-smooth">
