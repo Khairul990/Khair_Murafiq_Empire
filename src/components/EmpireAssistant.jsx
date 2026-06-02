@@ -290,12 +290,34 @@ export default function EmpireAssistant({ open, onToggle }) {
 
       if (type === 'voice_report') {
         let voiceTxt = `আসসালামু আলাইকুম বস। `
+        
         if (systemRisk === 'Need Review') {
-           voiceTxt += `বর্তমান অবস্থা Need Review। কারণ কিছু অ্যালার্ট বা কাজ বাকি আছে। `
+           voiceTxt += `বর্তমান অবস্থা, রিভিউ করা প্রয়োজন। `
+        } else if (systemRisk === 'Safe') {
+           voiceTxt += `বর্তমান অবস্থা নিরাপদ। `
+        } else if (systemRisk === 'Warning') {
+           voiceTxt += `বর্তমান অবস্থায় কিছু সতর্কতা আছে। `
+        } else if (systemRisk === 'Critical') {
+           voiceTxt += `বর্তমান অবস্থা ক্রিটিকাল। `
         } else {
-           voiceTxt += `বর্তমান অবস্থা ${systemRisk}। `
+           voiceTxt += `বর্তমান অবস্থা ঠিক আছে। `
         }
-        voiceTxt += `আপনার ${cAlerts.length}টি ক্রিটিকাল অ্যালার্ট, ${pendingTasks.length}টি কাজ বাকি আছে, এবং ${wProjects.length}টি ওয়েবসাইটে সমস্যা থাকতে পারে।`
+        
+        const cCount = cAlerts.length
+        const tCount = pendingTasks.length
+        const wCount = wProjects.length
+
+        if (cCount === 0 && tCount === 0 && wCount === 0) {
+           voiceTxt += `আপনার কোনো নতুন কাজ বা সমস্যা নেই। নিশ্চিন্তে থাকুন।`
+        } else {
+           const parts = []
+           if (cCount > 0) parts.push(`${cCount}টি ক্রিটিকাল অ্যালার্ট`)
+           if (tCount > 0) parts.push(`${tCount}টি কাজ বাকি`)
+           if (wCount > 0) parts.push(`${wCount}টি ওয়েবসাইটে সমস্যা`)
+           
+           voiceTxt += `আপনার ` + parts.join(', ') + ` আছে।`
+        }
+        
         return voiceTxt
       }
 
