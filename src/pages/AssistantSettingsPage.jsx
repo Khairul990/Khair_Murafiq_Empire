@@ -86,15 +86,26 @@ export default function AssistantSettingsPage() {
 
   const handleTestVoice = () => {
     if (!window.speechSynthesis) return
+    
+    // Critical fix for Chrome: cancel any pending speech
+    window.speechSynthesis.cancel()
+    
     if (isTestPlaying) {
-      window.speechSynthesis.cancel()
       setIsTestPlaying(false)
       return
     }
+    
     const utterance = new SpeechSynthesisUtterance('আসসালামু আলাইকুম। আমি এম্পায়ার এআই। আপনার সিস্টেম কাজ করছে।')
     const voices = window.speechSynthesis.getVoices()
+    
+    // First try standard lang codes
     let bnVoice = voices.find(v => v.lang.includes('bn') || v.lang.includes('bn-IN') || v.lang.includes('bn-BD'))
-    if (!bnVoice) bnVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Microsoft'))
+    
+    // Google Chrome explicit fallback
+    if (!bnVoice) {
+      bnVoice = voices.find(v => v.name.includes('Google') && (v.name.includes('বাংলা') || v.name.toLowerCase().includes('bangla') || v.name.toLowerCase().includes('bengali')))
+    }
+
     if (bnVoice) {
       utterance.voice = bnVoice
       utterance.lang = bnVoice.lang || 'bn-BD'
@@ -111,7 +122,10 @@ export default function AssistantSettingsPage() {
     utterance.onend = () => setIsTestPlaying(false)
     utterance.onerror = () => setIsTestPlaying(false)
 
-    window.speechSynthesis.speak(utterance)
+    // Chrome hack: slight delay after cancel to prevent immediate abort
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance)
+    }, 50)
   }
 
   const handleTestPremiumVoice = async () => {
@@ -279,6 +293,9 @@ export default function AssistantSettingsPage() {
                      onChange={(e) => updateSetting('checkInterval', Number(e.target.value))}
                      className="bg-obsidian-dark border border-obsidian-border rounded px-2 py-1 text-xs text-white outline-none focus:border-gold/30"
                   >
+                     <option value={60000}>1 minute</option>
+                     <option value={120000}>2 minutes</option>
+                     <option value={180000}>3 minutes</option>
                      <option value={300000}>5 minutes</option>
                      <option value={600000}>10 minutes</option>
                      <option value={1800000}>30 minutes</option>

@@ -132,9 +132,19 @@ export default function EmpireAssistant({ open, onToggle }) {
   const speakWithBrowser = (text) => {
     if (!window.speechSynthesis) return
 
+    // Critical fix for Chrome: cancel any pending speech
+    window.speechSynthesis.cancel()
+
     const utterance = new SpeechSynthesisUtterance(text)
     const voices = window.speechSynthesis.getVoices()
+    
+    // First try standard lang codes
     let bnVoice = voices.find(v => v.lang.includes('bn') || v.lang.includes('bn-IN') || v.lang.includes('bn-BD'))
+    
+    // Google Chrome explicit fallback
+    if (!bnVoice) {
+      bnVoice = voices.find(v => v.name.includes('Google') && (v.name.includes('বাংলা') || v.name.toLowerCase().includes('bangla') || v.name.toLowerCase().includes('bengali')))
+    }
     
     if (bnVoice) {
       utterance.voice = bnVoice
@@ -160,7 +170,10 @@ export default function EmpireAssistant({ open, onToggle }) {
       setAudioBlockedWarning(false)
     }
 
-    window.speechSynthesis.speak(utterance)
+    // Chrome hack: slight delay after cancel to prevent immediate abort
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance)
+    }, 50)
   }
 
   const runProactiveCheck = async () => {
