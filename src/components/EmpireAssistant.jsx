@@ -254,8 +254,9 @@ export default function EmpireAssistant({ open, onToggle }) {
       // Check auto briefing
       if (!shouldSpeak && settings.autoVoiceBriefing) {
         const lastBriefing = localStorage.getItem('km_empire_last_briefing_at')
-        // Brief once every 1 hour (3600000ms) or if never
-        if (!lastBriefing || (now.getTime() - new Date(lastBriefing).getTime() > 3600000)) {
+        const briefingInterval = settings.checkInterval || 300000
+        // Brief based on check interval (subtract 2 seconds to avoid race conditions with setInterval)
+        if (!lastBriefing || (now.getTime() - new Date(lastBriefing).getTime() >= (briefingInterval - 2000))) {
           shouldSpeak = true
           textToSpeak = `আসসালামু আলাইকুম বস। বর্তমান অবস্থা বলছি। আপনার ${activeAlerts.length}টি alert আছে, ${pendingTasks.length}টি task pending আছে, এবং ${projects.length}টি website monitor হচ্ছে। আগে critical alert check করা ভালো। আল্লাহ ভরসা, ধীরে ধীরে এগোবো।`
           localStorage.setItem('km_empire_last_briefing_at', now.toISOString())
