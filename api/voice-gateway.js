@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         text: text,
-        model_id: 'eleven_multilingual_v2', // Good for Bengali and English
+        model_id: 'eleven_multilingual_v1', // Recommended for free plan reliability
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75
