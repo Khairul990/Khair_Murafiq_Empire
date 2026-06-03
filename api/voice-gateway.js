@@ -47,9 +47,17 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      let customMessage = `ElevenLabs API failed: ${response.status}`;
+      
+      if (response.status === 402) {
+        customMessage = 'ElevenLabs API Quota Exceeded (402). Please check your account credits.';
+      } else if (response.status === 401) {
+        customMessage = 'ElevenLabs API Key Invalid (401). Please check your Vercel Environment Variables.';
+      }
+
       return res.status(200).json({
         ok: false,
-        message: `ElevenLabs API failed: ${response.status}`,
+        message: customMessage,
         details: errorText
       });
     }
