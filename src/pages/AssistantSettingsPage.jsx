@@ -7,9 +7,9 @@ import { requestElevenLabsVoice } from '../services/apiGatewayClient'
 
 const defaultSettings = {
   voiceOutput: true,
-  premiumVoiceEnabled: false,
-  autoVoiceBriefing: false,
-  monitorActive: false,
+  premiumVoiceEnabled: true,
+  autoVoiceBriefing: true,
+  monitorActive: true,
   quietMode: false,
   checkInterval: 300000,
   alertVoice: true,

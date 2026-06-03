@@ -18,9 +18,9 @@ export default function EmpireAssistant({ open, onToggle }) {
 
   const [settings, setSettings] = useState({
     voiceOutput: true,
-    premiumVoiceEnabled: false,
-    autoVoiceBriefing: false,
-    monitorActive: false,
+    premiumVoiceEnabled: true,
+    autoVoiceBriefing: true,
+    monitorActive: true,
     quietMode: false,
     checkInterval: 300000,
     alertVoice: true,
